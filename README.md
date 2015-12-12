@@ -1,5 +1,5 @@
 # HYDRAD
-__HYD__rodynamics and __RAD__iation code for computing field-aligned solutions to hydrodynamic solutions of coronal loop plasma. See Bradshaw and Cargill (2013)
+**HYD**rodynamics and **RAD**iation code for computing field-aligned solutions to hydrodynamic solutions of coronal loop plasma. See Bradshaw and Cargill (2013)
 
 ## Directory Tree
 ```
@@ -108,13 +108,6 @@ __HYD__rodynamics and __RAD__iation code for computing field-aligned solutions t
 6. GUI runs `HYDRAD.bat`
   + Compile HYDRAD via `HYDRAD/build_scripts/build_HYDRAD.bat` into `HYDRAD.exe`
   + Run `HYDRAD.exe`
- 
-### HYDRAD (dynamics)
-
-- Heating, radiation, mesh options all set by GUI
-- Path to initial profile is hardcoded
-- Run dynamics code with custom .h files, given .cfg files
-- Results output to `Results/` (this path is hardcoded)
 
 ##Ideas
 
