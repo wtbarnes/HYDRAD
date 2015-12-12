@@ -1,5 +1,5 @@
 # HYDRAD
-*HYD*rodynamics and *RAD*iation code for computing field-aligned solutions to hydrodynamic solutions of coronal loop plasma. See Bradshaw and Cargill (2013)
+__HYD__rodynamics and __RAD__iation code for computing field-aligned solutions to hydrodynamic solutions of coronal loop plasma. See Bradshaw and Cargill (2013)
 
 ## Directory Tree
 ```
@@ -84,22 +84,31 @@
     └── 3D_Plot
 ```
 
-##TODO:
+##Build Procedure
 
- - Rewrite make/build system for portability and to make it less of a nightmare; possibly use Python to do some of the trickier configuration?
- - Remove hardcoding of input/output paths
- - Make all .cfg files into XML configuration files
- - Determine structure of .cfg files
+1. GUI generates Initial Conditions startup files
+  + Configuration files (read in directly)
+    * `Initial_Conditions/config/initial_conditions.cfg`
+    * `Radiation_Model/config/elements_{eq,neq}.cfg`
+  + Header files (define boolean variables using `#if,#else,#endif`)
+    * `Initial_Conditions/source/config.h`
+    * `Radiation_Model/source/config.h`
+2. GUI generates Initial Conditions build scripts
+  + `Initial_Conditions.bat`
+3. GuI runs `Initial_Conditions.bat`
+  + Compile Initial Conditions code via `Initial_Conditions/build_scripts/build_initial_conditions.bat` into `Initial_Conditions.exe`
+  + Run `Initial_Conditions.exe`
+4. GUI generates HYDRAD startup files
+  + Configuration files (read in directly)
+    * `HYDRAD/config/hydrad.cfg`
+	* `Heating_Model/config/heating_model.cfg`
+  + Header files (define boolean variables using `#if,#else,#endif`)
+5. GUI generates HYDRAD build scripts
+  + `HYDRAD.bat`
+6. GUI runs `HYDRAD.bat`
+  + Compile HYDRAD via `HYDRAD/build_scripts/build_HYDRAD.bat` into `HYDRAD.exe`
+  + Run `HYDRAD.exe`
  
-## Workflow
-Here, keep a record of the HYDRAD workflow as I understand it.
-
-### Initial Conditions
-
-- Configure initial conditions at GUI level; write initial parameters to .cfg files and rewrite needed header files
-- These files go to `InitialConditions/config` and various header files (new header file for each new set of initial conditions means need to compile again for each new set of inputs!)
-- Run initial conditions code to generate equilibrium loop solutions
-
 ### HYDRAD (dynamics)
 
 - Heating, radiation, mesh options all set by GUI
@@ -108,3 +117,10 @@ Here, keep a record of the HYDRAD workflow as I understand it.
 - Results output to `Results/` (this path is hardcoded)
 
 ##Ideas
+
+##TODO:
+
+ - Rewrite make/build system for portability and to make it less of a nightmare; possibly use Python to do some of the trickier configuration?
+ - Remove hardcoding of input/output paths
+ - Make all .cfg files into XML configuration files
+ - Determine structure of .cfg files
