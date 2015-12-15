@@ -89,7 +89,7 @@
 1. GUI generates Initial Conditions startup files
   + Configuration files (read in directly)
     * `Initial_Conditions/config/initial_conditions.cfg`
-    * `Radiation_Model/config/elements_{eq,neq}.cfg`
+    * `Radiation_Model/config/elements_eq.cfg`
   + Header files (define boolean variables using `#if,#else,#endif`)
     * `Initial_Conditions/source/config.h`
     * `Radiation_Model/source/config.h`
@@ -102,7 +102,10 @@
   + Configuration files (read in directly)
     * `HYDRAD/config/hydrad.cfg`
 	* `Heating_Model/config/heating_model.cfg`
+	* `Radiation_Model/config/elements_{eq,neq}.cfg`
   + Header files (define boolean variables using `#if,#else,#endif`)
+    * `HYDRAD/source/config.h`
+	* `Radiation_Model/source/config.h`
 5. GUI generates HYDRAD build scripts
   + `HYDRAD.bat`
 6. GUI runs `HYDRAD.bat`
