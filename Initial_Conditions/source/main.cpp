@@ -53,7 +53,7 @@ int iTRplusCoronaplusTRSteps, iTotalSteps;
 printf( "\n\nCalculating initial hydrostatic conditions...\n\n" );
 
 // Get the user-specified parameter values from the configuration file
-GetConfigurationParameters( &Params );
+GetConfigurationParametersXML( &Params );
 
 // Initialise the radiative losses
 pRadiation = new CRadiation( (char *)"Radiation_Model/config/elements_eq.cfg" );

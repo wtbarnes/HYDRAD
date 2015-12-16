@@ -18,7 +18,42 @@
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
 #include "../../Resources/source/constants.h"
+#include "../../Resources/source/xmlreader.h"
 
+void GetConfigurationParametersXML( PARAMETERS *pParams )
+{
+	//Parse XML configuration file
+	TiXmlDocument doc("configurations/initial_conditions.cfg.xml");
+	
+	//Check if loaded
+	bool loadOK = doc.LoadFile();
+	if(!loadOK)
+	{
+		printf("Failed to load XML configuration file.\n");
+		//TODO: Exit or break out from here
+	}
+	
+	//Get Document root
+	TiXmlElement *root = doc.FirstChildElement();
+	
+	//Retrieve elements
+	sprintf(pParams->szOutputFilename,"%s",check_element(recursive_read(root,"ic_root_output"),"ic_root_output")->GetText());
+	pParams->Lfull = atof(check_element(recursive_read(root,"loop_length_full"),"loop_length_full")->GetText());
+	pParams->Inc = atof(check_element(recursive_read(root,"loop_inclination"),"loop_inclination")->GetText());
+	pParams->s0 = atof(check_element(recursive_read(root,"foot_point_height"),"foot_point_height")->GetText());
+	pParams->T0 = atof(check_element(recursive_read(root,"foot_point_temperature"),"foot_point_temperature")->GetText());
+	pParams->n0 = atof(check_element(recursive_read(root,"foot_point_density"),"foot_point_density")->GetText());
+	pParams->sH0 = atof(check_element(recursive_read(root,"heating_location"),"heating_location")->GetText());
+	pParams->sH = atof(check_element(recursive_read(root,"heating_scale_height"),"heating_scale_height")->GetText());
+	pParams->Log_10H0[0] = atof(check_element(recursive_read(root,"heating_range_lower"),"heating_range_lower")->GetText());
+    pParams->Log_10H0[1] = atof(check_element(recursive_read(root,"heating_range_upper"),"heating_range_upper")->GetText());
+	pParams->dLog_10H0 = atof(check_element(recursive_read(root,"search_step_size"),"search_step_size")->GetText()); 
+	pParams->Hintervals = atof(check_element(recursive_read(root,"fine_tune_intervals"),"fine_tune_intervals")->GetText());
+	
+	//Free document tree
+	doc.Clear();
+
+}
 
 void GetConfigurationParameters( PARAMETERS *pParams )
 {

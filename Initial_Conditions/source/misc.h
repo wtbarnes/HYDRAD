@@ -9,6 +9,8 @@
 // ****
 
 void GetConfigurationParameters( PARAMETERS *pParams );
+void GetConfigurationParametersXML( PARAMETERS *pParams );
+
 
 #ifdef USE_TABULATED_GRAVITY
 #else // USE_TABULATED_GRAVITY
