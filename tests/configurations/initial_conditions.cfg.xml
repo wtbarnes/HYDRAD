@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<root>
+	<ic_root_output>Initial_Conditions/profiles/initial.amr</ic_root_output>
+	<loop_length_full>6.0e+9</loop_length_full>
+	<loop_inclination>0</loop_inclination>
+	<foot_point_height>5.0e+8</foot_point_height>
+	<foot_point_temperature>2.0e+4</foot_point_temperature>
+	<foot_point_density>1.0e+11</foot_point_density>
+	<heating_location>3e+9</heating_location>
+	<heating_scale_height>1e+308</heating_scale_height>
+	<heating_range_lower>-8.0</heating_range_lower>
+	<heating_range_upper>2.0</heating_range_upper>
+	<search_step_size>0.001</search_step_size>
+	<fine_tune_intervals>10000.0</fine_tune_intervals>
+</root>
