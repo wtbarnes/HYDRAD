@@ -25,9 +25,9 @@ else:
 env = Environment(CXX='g++',CXXFLAGS=['-march=native','-mfpmath=sse','-ffast-math','-O3','-Wall'])
 
 #Check OS and change include path
-if sys.platform == 'darwin':
+if 'darwin' in sys.platform:
     env.Append(CPPPATH=['/usr/include/malloc'])
-elif sys.platform == 'linux':
+elif 'linux' in sys.platform:
     env.Append(CPPPATH=['/usr/include'])
 else:
     print("Unrecognized platform. Set CPPPATH manually.")
