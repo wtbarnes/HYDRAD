@@ -31,6 +31,7 @@ elif sys.platform == 'linux':
     env.Append(CPPPATH=['/usr/include'])
 else:
     print("Unrecognized platform. Set CPPPATH manually.")
+    sys.exit(1)
     #TODO: add Windows option here; where is malloc.h in Cygwin?
     
 #Iterate over subdirectories
