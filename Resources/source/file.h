@@ -10,4 +10,9 @@
 // ****
 
 
+#include <string>
+#include <stdlib.h>
+
 void ReadDouble( void *pInputFile, double *pDouble );
+
+bool string2bool(std::string);

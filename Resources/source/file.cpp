@@ -1,7 +1,8 @@
 // ****
 // *
 // * A simple routine to accurately read floating-point values
-// * from datafiles
+// * from datafiles;
+// * Function to convert strings to boolean values.
 // * 
 // * (c) Dr. Stephen J. Bradshaw
 // *
@@ -12,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 
 void ReadDouble( void *pInputFile, double *pDouble )
@@ -24,4 +26,25 @@ pFile = (FILE*)pInputFile;
 fscanf( pFile, "%s", buffer );
 
 *pDouble = strtod( buffer, &end );
+}
+
+bool string2bool(std::string boolString)
+{
+	bool boolReturn;
+	
+	if(boolString.compare("true")==0 || boolString.compare("True")==0)
+	{
+		boolReturn = true;
+	}
+	else if(boolString.compare("false")==0 || boolString.compare("False")==0)
+	{
+		boolReturn = false;
+	}
+	else
+	{
+		printf("Unrecognized boolean option. Defaulting to false.\n");
+		boolReturn = false;
+	}
+	
+	return boolReturn;
 }

@@ -12,4 +12,7 @@
 	<heating_range_upper>2.0</heating_range_upper>
 	<search_step_size>0.001</search_step_size>
 	<fine_tune_intervals>10000.0</fine_tune_intervals>
+	<isothermal>true</isothermal>
+	
+	
 </root>
