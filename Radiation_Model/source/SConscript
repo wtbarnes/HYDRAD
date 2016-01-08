@@ -10,6 +10,8 @@ Import('env')
 
 sources = glob.glob('*.cpp')
 
-objs = env.Object(sources)
+ot_sources = glob.glob('OpticallyThick/*.cpp')
+
+objs = env.Object(sources+ot_sources)
 
 Return('objs')
