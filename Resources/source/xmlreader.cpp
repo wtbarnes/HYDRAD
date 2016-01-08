@@ -20,7 +20,7 @@ TiXmlElement * check_element(TiXmlElement *result,std::string search_value)
 	{
 		//TODO:default value when value cannot be found; search for default configuration.
 		//Package default XML with HYDRAD
-		printf("Could not find %s.\n",search_value);
+		printf("Could not find %s.\n",search_value.c_str());
 		printf("Returning NULL.\n");
 		return NULL;
 	}
