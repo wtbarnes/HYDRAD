@@ -19,10 +19,8 @@
 #include "ode.h"
 #include "misc.h"
 #include "../../Radiation_Model/source/radiation.h"
-#ifdef OPTICALLY_THICK_RADIATION
 #include "../../Radiation_Model/source/OpticallyThick/OpticallyThickIon.h"
 #include  "../../Resources/source/fitpoly.h"
-#endif // OPTICALLY_THICK_RADIATION
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/constants.h"
 
@@ -33,15 +31,13 @@ double FindHeatingRange( double *s, double *P, double *T, double *nH, double *ne
 double RefineSolution( double Log_10H0, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, PRADIATION pRadiation, int igdp, double **ppGravity );
 int CalculateSolution( double finalH0, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, PRADIATION pRadiation, int igdp, double **ppGravity );
 int AddChromospheres( int iTRplusCoronaplusTRSteps, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, int igdp, double **ppGravity );
+int AddChromospheresOpticallyThick( int iTRplusCoronaplusTRSteps, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, int igdp, double **ppGravity );
 
 PARAMETERS Params;
 PRADIATION pRadiation;
 
 FILE *pFile;
-#ifdef USE_TABULATED_GRAVITY
-#else // USE_TABULATED_GRAVITY
 char szGravityFilename[256];
-#endif // USE_TABULATED_GRAVITY
 double **ppGravity;
 int i, igdp;
 
@@ -59,13 +55,17 @@ GetConfigurationParametersXML( &Params );
 pRadiation = new CRadiation( (char *)"Radiation_Model/config/elements_eq.cfg" );
 
 // Initialise the gravitational geometry
-#ifdef USE_TABULATED_GRAVITY
-pFile = fopen( TABULATED_GRAVITY_FILE, "r" );
-#else // USE_TABULATED_GRAVITY
-GenerateSemiCircularLoop( Params );
-sprintf( szGravityFilename, "%s.gravity", Params.szOutputFilename );
-pFile = fopen( szGravityFilename, "r" );
-#endif // USE_TABULATED_GRAVITY
+if(Params.use_tabulated_gravity)
+{
+	pFile = fopen( Params.tabulated_gravity_file, "r" );
+}
+else
+{
+	GenerateSemiCircularLoop( Params );
+	sprintf( szGravityFilename, "%s.gravity", Params.szOutputFilename );
+	pFile = fopen( szGravityFilename, "r" );
+}
+
 fscanf( pFile, "%i", &igdp );
 ppGravity = (double**)malloc( igdp * sizeof( double ) );
 for( i=0; i<igdp; i++ )
@@ -77,11 +77,11 @@ for( i=0; i<igdp; i++ )
 fclose( pFile );
 
 // Allocate memory to store the hydrostatic profiles
-s = (double*)malloc( sizeof(double) * MAX_CELLS );
-P = (double*)malloc( sizeof(double) * MAX_CELLS );
-T = (double*)malloc( sizeof(double) * MAX_CELLS );
-nH = (double*)malloc( sizeof(double) * MAX_CELLS );
-ne = (double*)malloc( sizeof(double) * MAX_CELLS );
+s = (double*)malloc( sizeof(double) * Params.max_cells );
+P = (double*)malloc( sizeof(double) * Params.max_cells );
+T = (double*)malloc( sizeof(double) * Params.max_cells );
+nH = (double*)malloc( sizeof(double) * Params.max_cells );
+ne = (double*)malloc( sizeof(double) * Params.max_cells );
 
 Log_10H0 = FindHeatingRange( s, P, T, nH, ne, Params, pRadiation, igdp, ppGravity );
 finalH0 = RefineSolution( Log_10H0, s, P, T, nH, ne, Params, pRadiation, igdp, ppGravity );
@@ -532,8 +532,7 @@ while( s[iStep] <= sR ) {
 return iStep;
 }
 
-#ifdef OPTICALLY_THICK_RADIATION
-int AddChromospheres( int iTRplusCoronaplusTRSteps, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, int igdp, double **ppGravity )
+int AddChromospheresOpticallyThick( int iTRplusCoronaplusTRSteps, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, int igdp, double **ppGravity )
 {
 double GetVALTemperature( double s, int iVALTemperatureDP, double **ppVALTemperature );
 
@@ -761,7 +760,7 @@ FitPolynomial4( x, y, s, &fVALTemperature, &error );
 
 return fVALTemperature;
 }
-#else // OPTICALLY_THICK_RADIATION
+
 int AddChromospheres( int iTRplusCoronaplusTRSteps, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, int igdp, double **ppGravity )
 {
 double ds, max_ds;
@@ -918,4 +917,3 @@ iTotalSteps = iStep + 1;
 
 return iTotalSteps;
 }
-#endif // OPTICALLY_THICK_RADIATION

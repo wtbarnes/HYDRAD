@@ -104,8 +104,6 @@ fclose( pFile );
 }
 */
 
-#ifdef USE_TABULATED_GRAVITY
-#else // USE_TABULATED_GRAVITY
 void GenerateSemiCircularLoop( PARAMETERS Params )
 {
 double CalcSolarGravity( double s, double Lfull, double Inc );
@@ -116,7 +114,7 @@ char szGravityFilename[256];
 double s, ds;
 int i, igdp;
 
-igdp = MIN_CELLS / 5; // Hard wired
+igdp = Params.min_cells / 5; // Hard wired
 
 s = 0.0;
 ds = Params.Lfull / ((double)igdp);
@@ -148,7 +146,6 @@ result = - SOLAR_SURFACE_GRAVITY * ( SOLAR_RADIUS_SQUARED / ( r * r ) ) * cos( f
 
 return result;
 }
-#endif // USE_TABULATED_GRAVITY
 
 void WriteAMRFile( int iTotalSteps, double *s, double *T, double *nH, double *ne, PARAMETERS Params )
 {
@@ -158,17 +155,16 @@ double ds, sAMR;
 double x[5], y[5], error, fConservedQuantities[3];
 
 long iMAX_CELLS;
-#ifdef ADAPT
 long **ppiID, iID;
 long iRL, iBlockLength;
 int j;
-#endif // ADAPT
 long i, k;
 
-ds = Params.Lfull / MIN_CELLS;
-#ifdef ADAPT
-ds /= pow( 2.0, MAX_REFINEMENT_LEVEL );
-#endif // ADAPT
+ds = Params.Lfull / Params.min_cells;
+if(Params.adapt)
+{
+	ds /= pow( 2.0, Params.max_refinement_level);	
+}
 iMAX_CELLS = (long)(Params.Lfull/ds);
 
 // Ensure the maximum number of grid cells is an even number
@@ -178,27 +174,28 @@ if( iMAX_CELLS & 1 )
 	ds = Params.Lfull / (double)iMAX_CELLS;
 }
 
-#ifdef ADAPT
-// Allocate sufficient memory to hold the unique ID numbers that pair grid cells following refinement
-ppiID = (long**)malloc( sizeof(long) * iMAX_CELLS );
-for( i=0; i<iMAX_CELLS; i++ )
-    ppiID[i] = (long*)malloc( sizeof(long) * MAX_REFINEMENT_LEVEL );
-
-// Create the blocks of unique ID numbers for each refinement level
-iID = 0;
-for( j=0; j<MAX_REFINEMENT_LEVEL; j++ )
+if(Params.adapt)
 {
-    iRL = j + 1;
-    iBlockLength = pow( 2, ( MAX_REFINEMENT_LEVEL - iRL + 1 ) );
-    for( i=0; i<iMAX_CELLS; i+=iBlockLength )
-    {
-        for( k=0; k<iBlockLength; k++ )
-            ppiID[i+k][j] = iID;
+	// Allocate sufficient memory to hold the unique ID numbers that pair grid cells following refinement
+	ppiID = (long**)malloc( sizeof(long) * iMAX_CELLS );
+	for( i=0; i<iMAX_CELLS; i++ )
+	    ppiID[i] = (long*)malloc( sizeof(long) * Params.max_refinement_level );
 
-        iID++;
-    }
+	// Create the blocks of unique ID numbers for each refinement level
+	iID = 0;
+	for( j=0; j<Params.max_refinement_level; j++ )
+	{
+	    iRL = j + 1;
+	    iBlockLength = pow( 2, ( Params.max_refinement_level - iRL + 1 ) );
+	    for( i=0; i<iMAX_CELLS; i+=iBlockLength )
+	    {
+	        for( k=0; k<iBlockLength; k++ )
+	            ppiID[i+k][j] = iID;
+
+	        iID++;
+	    }
+	}	
 }
-#endif // ADAPT
 
 sAMR = ds / 2.0;
 
@@ -206,9 +203,11 @@ pFile = fopen( Params.szOutputFilename, "w" );
 // Write the header information into the .amr file
 fprintf( pFile, "0.0\n0\n%.16e\n%ld\n", Params.Lfull, iMAX_CELLS );
 i = 2;
-#ifdef ADAPT
-j = 0;
-#endif // ADAPT
+if(Params.adapt)
+{
+	j = 0;
+}
+
 for( ;; )
 {
     if( sAMR > Params.Lfull ) break;
@@ -245,37 +244,41 @@ for( ;; )
     y[3] = T[i];
     y[4] = T[i+1];
     FitPolynomial4( x, y, sAMR, &(fConservedQuantities[2]), &error );
+	if(Params.adapt)
+	{
+	    fprintf( pFile, "%.16e\t%.16e\t%.16e\t0.0\t%.16e\t%.16e\t%i", sAMR, ds, (AVERAGE_PARTICLE_MASS*fConservedQuantities[0]),
+	                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[1]*fConservedQuantities[2]),
+	                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[0]*fConservedQuantities[2]),
+	                                                                  Params.max_refinement_level );
 
-#ifdef ADAPT
-    fprintf( pFile, "%.16e\t%.16e\t%.16e\t0.0\t%.16e\t%.16e\t%i", sAMR, ds, (AVERAGE_PARTICLE_MASS*fConservedQuantities[0]),
-                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[1]*fConservedQuantities[2]),
-                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[0]*fConservedQuantities[2]),
-                                                                  MAX_REFINEMENT_LEVEL );
+	    for( k=0; k<Params.max_refinement_level ; k++ )
+	        fprintf( pFile, "\t%ld", ppiID[j][k] );
+	    fprintf( pFile, "\n" );
+	    j++;
+	}
+	else
+	{
+	    fprintf( pFile, "%.16e\t%.16e\t%.16e\t0.0\t%.16e\t%.16e\t0", sAMR, ds, (AVERAGE_PARTICLE_MASS*fConservedQuantities[0]),
+	                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[1]*fConservedQuantities[2]),
+	                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[0]*fConservedQuantities[2]) );
 
-    for( k=0; k<MAX_REFINEMENT_LEVEL; k++ )
-        fprintf( pFile, "\t%ld", ppiID[j][k] );
-    fprintf( pFile, "\n" );
-    j++;
-#else // ADAPT
-    fprintf( pFile, "%.16e\t%.16e\t%.16e\t0.0\t%.16e\t%.16e\t0", sAMR, ds, (AVERAGE_PARTICLE_MASS*fConservedQuantities[0]),
-                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[1]*fConservedQuantities[2]),
-                                                                  (1.5*BOLTZMANN_CONSTANT*fConservedQuantities[0]*fConservedQuantities[2]) );
-
-    for( k=0; k<MAX_REFINEMENT_LEVEL; k++ )
-        fprintf( pFile, "\t0" );
-    fprintf( pFile, "\n" );
-#endif // ADAPT
+	    for( k=0; k<Params.max_refinement_level ; k++ )
+	        fprintf( pFile, "\t0" );
+	    fprintf( pFile, "\n" );
+	}
 
     sAMR += ds;
 }
 fclose( pFile );
 
-#ifdef ADAPT
-// Free the memory allocated to the unique cell ID numbers
-for( i=0; i<iMAX_CELLS; i++ )
-    free( ppiID[i] );
-free( ppiID );
-#endif // ADAPT
+if(Params.adapt)
+{
+	// Free the memory allocated to the unique cell ID numbers
+	for( i=0; i<iMAX_CELLS; i++ )
+	    free( ppiID[i] );
+	free( ppiID );
+}
+
 }
 
 void WritePHYFile( int iTotalSteps, double *s, double *T, double *nH, double *ne, PARAMETERS Params )
