@@ -23,7 +23,7 @@
 void GetConfigurationParametersXML( PARAMETERS *pParams )
 {
 	//Parse XML configuration file
-	TiXmlDocument doc("configurations/initial_conditions.cfg.xml");
+	TiXmlDocument doc("tests/configurations/initial_conditions.cfg.xml");
 	
 	//Check if loaded
 	bool loadOK = doc.LoadFile();
@@ -36,8 +36,11 @@ void GetConfigurationParametersXML( PARAMETERS *pParams )
 	//Get Document root
 	TiXmlElement *root = doc.FirstChildElement();
 	
-	//Retrieve elements
+	//Retrieve all configuration elements
+	//string
 	sprintf(pParams->szOutputFilename,"%s",check_element(recursive_read(root,"ic_root_output"),"ic_root_output")->GetText());
+	sprintf(pParams->tabulated_gravity_file,"%s",check_element(recursive_read(root,"tabulated_gravity_file"),"tabulated_gravity_file")->GetText());
+	//float
 	pParams->Lfull = atof(check_element(recursive_read(root,"loop_length_full"),"loop_length_full")->GetText());
 	pParams->Inc = atof(check_element(recursive_read(root,"loop_inclination"),"loop_inclination")->GetText());
 	pParams->s0 = atof(check_element(recursive_read(root,"foot_point_height"),"foot_point_height")->GetText());
@@ -49,12 +52,27 @@ void GetConfigurationParametersXML( PARAMETERS *pParams )
     pParams->Log_10H0[1] = atof(check_element(recursive_read(root,"heating_range_upper"),"heating_range_upper")->GetText());
 	pParams->dLog_10H0 = atof(check_element(recursive_read(root,"search_step_size"),"search_step_size")->GetText()); 
 	pParams->Hintervals = atof(check_element(recursive_read(root,"fine_tune_intervals"),"fine_tune_intervals")->GetText());
+	pParams->epsilon = atof(check_element(recursive_read(root,"epsilon"),"epsilon")->GetText());
+	pParams->min_ds = atof(check_element(recursive_read(root,"min_ds"),"min_ds")->GetText());
+	pParams->max_variation = atof(check_element(recursive_read(root,"max_variation"),"max_variation")->GetText());
+	//int
+	pParams->min_cells = atoi(check_element(recursive_read(root,"min_cells"),"min_cells")->GetText());
+	pParams->max_cells = atoi(check_element(recursive_read(root,"max_cells"),"max_cells")->GetText());
+	pParams->max_refinement_level =  atoi(check_element(recursive_read(root,"max_refinement_level"),"max_refinement_level")->GetText());
+	//bool
+	pParams->isothermal = string2bool(check_element(recursive_read(root,"isothermal"),"isothermal")->GetText());
+	pParams->use_power_law_radiative_losses = string2bool(check_element(recursive_read(root,"use_power_law_radiative_losses"),"use_power_law_radiative_losses")->GetText());
+	pParams->density_dependent_rates = string2bool(check_element(recursive_read(root,"density_dependent_rates"),"density_dependent_rates")->GetText());
+	pParams->optically_thick_radiation = string2bool(check_element(recursive_read(root,"optically_thick_radiation"),"optically_thick_radiation")->GetText());
+	pParams->use_tabulated_gravity = string2bool(check_element(recursive_read(root,"use_tabulated_gravity"),"use_tabulated_gravity")->GetText());
+	pParams->adapt = string2bool(check_element(recursive_read(root,"adapt"),"adapt")->GetText());
 	
 	//Free document tree
 	doc.Clear();
 
 }
 
+/*
 void GetConfigurationParameters( PARAMETERS *pParams )
 {
 FILE *pFile;
@@ -84,6 +102,7 @@ ReadDouble( pFile, &(pParams->Hintervals) );
 
 fclose( pFile );
 }
+*/
 
 #ifdef USE_TABULATED_GRAVITY
 #else // USE_TABULATED_GRAVITY
