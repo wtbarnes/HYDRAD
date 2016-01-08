@@ -1,5 +1,6 @@
 <?xml version="1.0" ?>
 <root>
+	<!-- Initial conditions configuration options -->
 	<ic_root_output>Initial_Conditions/profiles/initial.amr</ic_root_output>
 	<loop_length_full>6.0e+9</loop_length_full>
 	<loop_inclination>0</loop_inclination>
@@ -12,7 +13,18 @@
 	<heating_range_upper>2.0</heating_range_upper>
 	<search_step_size>0.001</search_step_size>
 	<fine_tune_intervals>10000.0</fine_tune_intervals>
+	<!-- (mostly) boolean options originally set in Initial_Conditions/source/config.h -->
 	<isothermal>true</isothermal>
-	
-	
+	<use_power_law_radiative_losses>true</use_power_law_radiative_losses>
+	<density_dependent_rates>false</density_dependent_rates>
+	<optically_thick_radiation>false</optically_thick_radiation>
+	<use_tabulated_gravity>false</use_tabulated_gravity>
+	<tabulated_gravity_file>no_file</tabulated_gravity_file>
+	<epsilon>0.01</epsilon>
+	<adapt>true</adapt>
+	<min_cells>150</min_cells>
+	<max_cells>30000</max_cells>
+	<max_refinement_level>12</max_refinement_level>
+	<min_ds>1e0</min_ds>
+	<max_variation>1.10</max_variation>
 </root>
