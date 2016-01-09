@@ -8,14 +8,9 @@
 // *
 // ****
 
-void GetConfigurationParameters( PARAMETERS *pParams );
 void GetConfigurationParametersXML( PARAMETERS *pParams );
 
-
-#ifdef USE_TABULATED_GRAVITY
-#else // USE_TABULATED_GRAVITY
 void GenerateSemiCircularLoop( PARAMETERS Params );
-#endif // USE_TABULATED_GRAVITY
 
 void WriteAMRFile( int iTotalSteps, double *s, double *T, double *nH, double *ne, PARAMETERS Params );
 void WritePHYFile( int iTotalSteps, double *s, double *T, double *nH, double *ne, PARAMETERS Params );
