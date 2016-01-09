@@ -187,7 +187,7 @@ for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params
 			else
 			{
 	            H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
-				if(Params.use_pawer_law_radiative_losses)
+				if(Params.use_power_law_radiative_losses)
 				{
 		            R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
 				}
