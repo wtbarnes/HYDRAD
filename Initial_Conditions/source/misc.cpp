@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "config.h"
 #include "params.h"
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"

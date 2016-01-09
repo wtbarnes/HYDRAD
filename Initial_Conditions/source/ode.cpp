@@ -13,7 +13,6 @@
 
 #include <math.h>
 
-#include "config.h"
 #include  "../../Resources/source/fitpoly.h"
 #include "../../Resources/source/constants.h"
 

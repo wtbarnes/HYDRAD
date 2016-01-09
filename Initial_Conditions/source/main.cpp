@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "config.h"
 #include "params.h"
 #include "ode.h"
 #include "misc.h"
