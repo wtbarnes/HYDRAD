@@ -86,7 +86,14 @@ ne = (double*)malloc( sizeof(double) * Params.max_cells );
 Log_10H0 = FindHeatingRange( s, P, T, nH, ne, Params, pRadiation, igdp, ppGravity );
 finalH0 = RefineSolution( Log_10H0, s, P, T, nH, ne, Params, pRadiation, igdp, ppGravity );
 iTRplusCoronaplusTRSteps = CalculateSolution( finalH0, s, P, T, nH, ne, Params, pRadiation, igdp, ppGravity );
-iTotalSteps = AddChromospheres( iTRplusCoronaplusTRSteps, s, P, T, nH, ne, Params, igdp, ppGravity );
+if(Params.optically_thick_radiation)
+{
+	iTotalSteps = AddChromospheresOpticallyThick( iTRplusCoronaplusTRSteps, s, P, T, nH, ne, Params, igdp, ppGravity );
+}
+else
+{
+	iTotalSteps = AddChromospheres( iTRplusCoronaplusTRSteps, s, P, T, nH, ne, Params, igdp, ppGravity );
+}
 
 printf( "Writing initial conditions file...\n\n" );
 
@@ -123,7 +130,7 @@ double dPbyds, dFcbyds, dTbyds;
 double FracDiff;
 int iStep;
 
-max_ds = Params.Lfull / MIN_CELLS;
+max_ds = Params.Lfull / Params.min_cells;
 
 sL = Params.s0;
 sR = Params.Lfull - sL;
@@ -133,26 +140,34 @@ for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params
 {
     iStep = 0;
 
-#ifdef ISOTHERMAL
-    H0 = 0.0;
-#else // ISOTHERMAL
-    H0 = pow( 10.0, Log_10H0 );
-#endif // ISOTHERMAL
+	if(Params.isothermal)
+	{
+	    H0 = 0.0;
+	}
+	else
+	{
+	    H0 = pow( 10.0, Log_10H0 );		
+	}
 
     // Set the initial conditions
     Fc = 0.0;
     nH[iStep] = Params.n0;
-#ifdef OPTICALLY_THICK_RADIATION
-    // 1.000144 = 1.0 + 1.44e-4
-    ne[iStep] = 1.000144 * nH[iStep];
-#else // OPTICALLY_THICK_RADIATION
-    ne[iStep] = nH[iStep];
-#endif // OPTICALLY_THICK_RADIATION
+	if(Params.optically_thick_radiation)
+	{
+		// 1.000144 = 1.0 + 1.44e-4
+	 	ne[iStep] = 1.000144 * nH[iStep];
+	}
+	else
+	{
+	    ne[iStep] = nH[iStep];
+	
+	}
+	
     T[iStep] = Params.T0;
     P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
     s[iStep] = 0.0 + sL;
-    ds = MIN_DS;
+    ds = Params.min_ds;
 
     for( ;; ) {
         do {
@@ -164,17 +179,23 @@ for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params
             dPbyds = CalcdPbyds( s[iStep], nH[iStep], igdp, ppGravity );
 
             // Calculate the heat input and the radiation
-#ifdef ISOTHERMAL
-            H = 0.0;
-            R = 0.0;
-#else // ISOTHERMAL
-            H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
-#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
-#else // USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
-#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#endif // ISOTHERMAL
+			if(Params.isothermal)
+			{
+	            H = 0.0;
+	            R = 0.0;
+			}
+			else
+			{
+	            H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
+				if(Params.use_pawer_law_radiative_losses)
+				{
+		            R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
+				}
+				else
+				{
+		            R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
+				}
+			}
 
             // Get the heat flux gradient
             dFcbyds = CalcdFcbyds( H, R );
@@ -195,17 +216,23 @@ for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params
             dPbyds = CalcdPbyds( (s[iStep]+(ds/2.0)), nH2, igdp, ppGravity );
 
             // Calculate the heat input and the radiation
-#ifdef ISOTHERMAL
-            H = 0.0;
-            R = 0.0;
-#else // ISOTHERMAL
-            H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
-#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
-#else // USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
-#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#endif // ISOTHERMAL
+			if(Params.isothermal)
+			{
+	            H = 0.0;
+	            R = 0.0;
+			}
+			else
+			{
+	            H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
+				if(Params.use_power_law_radiative_losses)
+				{
+		            R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
+				}
+				else
+				{
+		            R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
+				}
+			}
 
             // Get the heat flux gradient
             dFcbyds = CalcdFcbyds( H, R );
@@ -219,15 +246,15 @@ for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params
 
             T[iStep+1] = T[iStep] + ( dTbyds * ds );
             FracDiff = fabs( 1.0 - ( T[iStep+1] / T[iStep] ) );
-            if( FracDiff > EPSILON )
+            if( FracDiff > Params.epsilon )
             {
-		ds /= MAX_VARIATION;
-		if( ds < MIN_DS )
-		{
-			ds = MIN_DS;
-		}
+				ds /= Params.max_variation;
+				if( ds < Params.min_ds )
+				{
+					ds = Params.min_ds;
+				}
             }
-        } while ( FracDiff > EPSILON && ds > MIN_DS );
+        } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
 
         s[iStep+1] = s[iStep] + ds;
         if( s[iStep+1] >= sR ) break;
@@ -237,14 +264,17 @@ for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params
         Fc += dFcbyds * ds;
         P[iStep+1] = P[iStep] + ( dPbyds * ds );
         nH[iStep+1] = P[iStep+1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep+1] );
-#ifdef OPTICALLY_THICK_RADIATION
-        // 1.000144 = 1.0 + 1.44e-4
-        ne[iStep+1] = 1.000144 * nH[iStep+1];
-#else // OPTICALLY_THICK_RADIATION
-        ne[iStep+1] = nH[iStep+1];
-#endif // OPTICALLY_THICK_RADIATION
+		if(Params.optically_thick_radiation)
+		{
+	        // 1.000144 = 1.0 + 1.44e-4
+	        ne[iStep+1] = 1.000144 * nH[iStep+1];
+		}
+		else
+		{
+	        ne[iStep+1] = nH[iStep+1];
+		}
 
-        ds *= MAX_VARIATION;
+        ds *= Params.max_variation;
         if( ds > max_ds ) ds = max_ds;
 
         iStep++;
@@ -268,7 +298,7 @@ int iStep;
 double H0lower, H0upper, dH0, finalH0 = 0.0;
 double minFc = LARGEST_DOUBLE;
 
-max_ds = Params.Lfull / MIN_CELLS;
+max_ds = Params.Lfull / Params.min_cells;
 
 sL = Params.s0;
 sR = Params.Lfull - sL;
@@ -285,17 +315,20 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
     // Set the initial conditions
     Fc = 0.0;
     nH[iStep] = Params.n0;
-#ifdef OPTICALLY_THICK_RADIATION
-    // 1.000144 = 1.0 + 1.44e-4
-    ne[iStep] = 1.000144 * nH[iStep];
-#else // OPTICALLY_THICK_RADIATION
-    ne[iStep] = nH[iStep];
-#endif // OPTICALLY_THICK_RADIATION
+	if(Params.optically_thick_radiation)
+	{
+	    // 1.000144 = 1.0 + 1.44e-4
+	    ne[iStep] = 1.000144 * nH[iStep];
+	}
+	else
+	{
+	    ne[iStep] = nH[iStep];
+	}
     T[iStep] = Params.T0;
     P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
     s[iStep] = 0.0 + sL;
-    ds = MIN_DS;
+    ds = Params.min_ds;
 
     for( ;; ) {
         do {
@@ -307,17 +340,25 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
             dPbyds = CalcdPbyds( s[iStep], nH[iStep], igdp, ppGravity );
 
             // Calculate the heat input and the radiation
-#ifdef ISOTHERMAL
-            H = 0.0;
-            R = 0.0;
-#else // ISOTHERMAL
-            H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
-#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
-#else // USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
-#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#endif // ISOTHERMAL
+			if(Params.isothermal)
+			{
+
+	            H = 0.0;
+	            R = 0.0;
+				
+			}
+			else
+			{
+	            H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
+				if(Params.use_power_law_radiative_losses)
+				{
+		            R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
+				}
+				else
+				{
+		            R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
+				}
+			}
 
             // Get the heat flux gradient
             dFcbyds = CalcdFcbyds( H, R );
@@ -338,18 +379,24 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
             dPbyds = CalcdPbyds( (s[iStep]+(ds/2.0)), nH2, igdp, ppGravity );
 
             // Calculate the heat input and the radiation
-#ifdef ISOTHERMAL
-            H = 0.0;
-            R = 0.0;
-#else // ISOTHERMAL
-            H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
-#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
-#else // USE_POWER_LAW_RADIATIVE_LOSSES
-            R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
-#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#endif // ISOTHERMAL
-
+			if(Params.isothermal)
+			{
+				H = 0.0;
+	            R = 0.0;
+			}
+			else
+			{
+	            H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
+				if(Params.use_power_law_radiative_losses)
+				{
+		            R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
+				}
+				else
+				{
+		            R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
+				}
+			}
+			
             // Get the heat flux gradient
             dFcbyds = CalcdFcbyds( H, R );
 
@@ -362,14 +409,16 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
 
             T[iStep+1] = T[iStep] + ( dTbyds * ds );
             FracDiff = fabs( 1.0 - ( T[iStep+1] / T[iStep] ) );
-            if( FracDiff > EPSILON )
+            if( FracDiff > Params.epsilon )
             {
-		ds /= MAX_VARIATION;
-		if( ds < MIN_DS )
-                    ds = MIN_DS;
+				ds /= Params.max_variation;
+				if( ds < Params.min_ds )
+				{
+                    ds = Params.min_ds;
+				}
             }
 
-        } while ( FracDiff > EPSILON && ds > MIN_DS );
+        } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
 
         s[iStep+1] = s[iStep] + ds;
         if( s[iStep+1] >= sR ) break;
@@ -379,14 +428,17 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
         Fc += dFcbyds * ds;
         P[iStep+1] = P[iStep] + ( dPbyds * ds );
         nH[iStep+1] = P[iStep+1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep+1] );
-#ifdef OPTICALLY_THICK_RADIATION
-        // 1.000144 = 1.0 + 1.44e-4
-        ne[iStep+1] = 1.000144 * nH[iStep+1];
-#else // OPTICALLY_THICK_RADIATION
-        ne[iStep+1] = nH[iStep+1];
-#endif // OPTICALLY_THICK_RADIATION
+		if(Params.optically_thick_radiation)
+		{
+	        // 1.000144 = 1.0 + 1.44e-4
+	        ne[iStep+1] = 1.000144 * nH[iStep+1];
+		}
+		else
+		{
+	        ne[iStep+1] = nH[iStep+1];
+		}
 
-        ds *= MAX_VARIATION;
+        ds *= Params.max_variation;
         if( ds > max_ds ) ds = max_ds;
 
         iStep++;
@@ -397,7 +449,7 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
     if( ( s[iStep+1] >= sR ) && ( Fc > 0.0 ) && ( fabs(Fc) < fabs(minFc) ) )
     {
         minFc = Fc;
-	finalH0 = H0;
+		finalH0 = H0;
     }
 }
 
@@ -413,7 +465,7 @@ double dPbyds, dFcbyds, dTbyds;
 double FracDiff;
 int iStep;
 
-max_ds = Params.Lfull / MIN_CELLS;
+max_ds = Params.Lfull / Params.min_cells;
 
 sL = Params.s0;
 sR = Params.Lfull - sL;
@@ -423,17 +475,20 @@ iStep = 0;
 // Set the initial conditions
 Fc = 0.0;
 nH[iStep] = Params.n0;
-#ifdef OPTICALLY_THICK_RADIATION
-// 1.000144 = 1.0 + 1.44e-4
-ne[iStep] = 1.000144 * nH[iStep];
-#else // OPTICALLY_THICK_RADIATION
-ne[iStep] = nH[iStep];
-#endif // OPTICALLY_THICK_RADIATION
+if(Params.optically_thick_radiation)
+{
+	// 1.000144 = 1.0 + 1.44e-4
+	ne[iStep] = 1.000144 * nH[iStep];
+}
+else
+{
+	ne[iStep] = nH[iStep];
+}
 T[iStep] = Params.T0;
 P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
 s[iStep] = 0.0 + sL;
-ds = MIN_DS;
+ds = Params.min_ds;
 
 H0 = finalH0;
 
@@ -447,17 +502,23 @@ while( s[iStep] <= sR ) {
         dPbyds = CalcdPbyds( s[iStep], nH[iStep], igdp, ppGravity );
 
         // Calculate the heat input and the radiation
-#ifdef ISOTHERMAL
-        H = 0.0;
-        R = 0.0;
-#else // ISOTHERMAL
-        H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
-#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-        R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
-#else // USE_POWER_LAW_RADIATIVE_LOSSES
-        R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
-#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#endif // ISOTHERMAL
+		if(Params.isothermal)
+        {
+	        H = 0.0;
+	        R = 0.0;
+        }
+		else
+        {
+	        H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
+			if(Params.use_power_law_radiative_losses)
+			{
+				R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
+			}
+			else
+			{
+				R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
+			}
+        }
 
         // Get the heat flux gradient
         dFcbyds = CalcdFcbyds( H, R );
@@ -478,18 +539,24 @@ while( s[iStep] <= sR ) {
         dPbyds = CalcdPbyds( (s[iStep]+(ds/2.0)), nH2, igdp, ppGravity );
 
         // Calculate the heat input and the radiation
-#ifdef ISOTHERMAL
-        H = 0.0;
-        R = 0.0;
-#else // ISOTHERMAL
-        H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
-#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-        R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
-#else // USE_POWER_LAW_RADIATIVE_LOSSES
-        R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
-#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#endif // ISOTHERMAL
-
+		if(Params.isothermal)
+        {
+	        H = 0.0;
+	        R = 0.0;
+        }
+		else
+        {
+        	H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
+			if(Params.use_power_law_radiative_losses)
+			{
+		        R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
+			}
+			else
+			{
+		        R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
+			}
+        }
+		
         // Get the heat flux gradient
         dFcbyds = CalcdFcbyds( H, R );
 
@@ -502,28 +569,33 @@ while( s[iStep] <= sR ) {
 
         T[iStep+1] = T[iStep] + ( dTbyds * ds );
         FracDiff = fabs( 1.0 - ( T[iStep+1] / T[iStep] ) );
-        if( FracDiff > EPSILON )
+        if( FracDiff > Params.epsilon )
         {
-            ds /= MAX_VARIATION;
-            if( ds < MIN_DS )
-		ds = MIN_DS;
+            ds /= Params.max_variation;
+            if( ds < Params.min_ds )
+			{
+				ds = Params.min_ds;
+			}
         }
 
-    } while ( FracDiff > EPSILON && ds > MIN_DS );
+    } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
 
     s[iStep+1] = s[iStep] + ds;
 
     Fc += dFcbyds * ds;
     P[iStep+1] = P[iStep] + ( dPbyds * ds );
     nH[iStep+1] = P[iStep+1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep+1] );
-#ifdef OPTICALLY_THICK_RADIATION
-    // 1.000144 = 1.0 + 1.44e-4
-    ne[iStep+1] = 1.000144 * nH[iStep+1];
-#else // OPTICALLY_THICK_RADIATION
-    ne[iStep+1] = nH[iStep+1];
-#endif // OPTICALLY_THICK_RADIATION
+	if(Params.optically_thick_radiation)
+	{
+	    // 1.000144 = 1.0 + 1.44e-4
+	    ne[iStep+1] = 1.000144 * nH[iStep+1];
+	}
+	else
+    {
+		ne[iStep+1] = nH[iStep+1];
+	}
 
-    ds *= MAX_VARIATION;
+    ds *= Params.max_variation;
     if( ds > max_ds ) ds = max_ds;
 
     iStep++;
@@ -565,12 +637,12 @@ fclose( pFile );
 POPTICALLYTHICKION pHI;
 pHI = new COpticallyThickIon( 1, (char *)"h_1", (char *)"Radiation_Model/atomic_data/abundances/asplund.ab" );
 
-max_ds = Params.Lfull / MIN_CELLS;
+max_ds = Params.Lfull / Params.min_cells;
 
 // Left-hand chromosphere
 
 // Shift the TR + corona + TR solution in the array to make room for the chromosphere
-iStep = ( MAX_CELLS - iTRplusCoronaplusTRSteps ) / 2;
+iStep = ( Params.max_cells - iTRplusCoronaplusTRSteps ) / 2;
 for( i=iTRplusCoronaplusTRSteps-1; i>=0; i-- )
 {
     s[i+iStep] = s[i];
@@ -588,7 +660,7 @@ ne[iStep] = 1.000144 * nH[iStep];
 T[iStep] = Params.T0;
 P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
-ds = - MIN_DS;
+ds = - Params.min_ds;
 s[iStep] = s[iStep+1] + ds;
 
 for( ;; ) {
@@ -619,14 +691,16 @@ for( ;; ) {
 
         P[iStep-1] = P[iStep] + ( dPbyds * ds );
         FracDiff = fabs( 1.0 - ( P[iStep] / P[iStep-1] ) );
-        if( FracDiff > EPSILON )
+        if( FracDiff > Params.epsilon )
         {
-            ds /= MAX_VARIATION;
-            if( -ds < MIN_DS )
-                ds = - MIN_DS;
+            ds /= Params.max_variation;
+            if( -ds < Params.min_ds )
+			{
+                ds = - Params.min_ds;
+			}
         }
 
-    } while ( FracDiff > EPSILON && -ds > MIN_DS );
+    } while ( FracDiff > Params.epsilon && -ds > Params.min_ds );
 
     s[iStep-1] = s[iStep] + ds;
     if( s[iStep-1] < 0.0 ) break;
@@ -636,7 +710,7 @@ for( ;; ) {
     nH[iStep-1] = ( 1.0 / ( 1.0 + ( 1.0 - pHI->GetIonFrac( log10(T[iStep-1]) ) ) ) ) * nT;
     ne[iStep-1] = nT - ( ( 1.0 - 1.44e-4 ) * nH[iStep-1] );
 
-    ds *= MAX_VARIATION;
+    ds *= Params.max_variation;
     if( ds < -max_ds ) ds = - max_ds;
 
     iStep--;
@@ -694,14 +768,14 @@ for( ;; ) {
 
         P[iStep+1] = P[iStep] + ( dPbyds * ds );
         FracDiff = fabs( 1.0 - ( P[iStep+1] / P[iStep] ) );
-        if( FracDiff > EPSILON )
+        if( FracDiff > Params.epsilon )
         {
-            ds /= MAX_VARIATION;
-            if( ds < MIN_DS )
-		ds = MIN_DS;
+            ds /= Params.max_variation;
+            if( ds < Params.min_ds )
+		ds = Params.min_ds;
         }
 
-    } while ( FracDiff > EPSILON && ds > MIN_DS );
+    } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
 
     s[iStep+1] = s[iStep] + ds;
     if( s[iStep+1] > Params.Lfull ) break;
@@ -711,7 +785,7 @@ for( ;; ) {
     nH[iStep+1] = ( 1.0 / ( 1.0 + ( 1.0 - pHI->GetIonFrac( log10(T[iStep+1]) ) ) ) ) * nT;
     ne[iStep+1] = nT - ( ( 1.0 - 1.44e-4 ) * nH[iStep+1] );
 
-    ds *= MAX_VARIATION;
+    ds *= Params.max_variation;
     if( ds > max_ds ) ds = max_ds;
 
     iStep++;
@@ -769,12 +843,12 @@ double dPbyds;
 double FracDiff;
 int i, iStep, iCHRSteps, iTotalSteps;
 
-max_ds = Params.Lfull / MIN_CELLS;
+max_ds = Params.Lfull / Params.min_cells;
 
 // Left-hand chromosphere
 
 // Shift the TR + corona + TR solution in the array to make room for the chromosphere
-iStep = ( MAX_CELLS - iTRplusCoronaplusTRSteps ) / 2;
+iStep = ( Params.max_cells - iTRplusCoronaplusTRSteps ) / 2;
 for( i=iTRplusCoronaplusTRSteps-1; i>=0; i-- )
 {
     s[i+iStep] = s[i];
@@ -791,7 +865,7 @@ ne[iStep] = nH[iStep];
 T[iStep] = Params.T0;
 P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
-ds = - MIN_DS;
+ds = - Params.min_ds;
 s[iStep] = s[iStep+1] + ds;
 
 for( ;; ) {
@@ -820,14 +894,14 @@ for( ;; ) {
 
         P[iStep-1] = P[iStep] + ( dPbyds * ds );
         FracDiff = fabs( 1.0 - ( P[iStep] / P[iStep-1] ) );
-        if( FracDiff > EPSILON )
+        if( FracDiff > Params.epsilon )
         {
-            ds /= MAX_VARIATION;
-            if( -ds < MIN_DS )
-                ds = - MIN_DS;
+            ds /= Params.max_variation;
+            if( -ds < Params.min_ds )
+                ds = - Params.min_ds;
         }
 
-    } while ( FracDiff > EPSILON && -ds > MIN_DS );
+    } while ( FracDiff > Params.epsilon && -ds > Params.min_ds );
 
     s[iStep-1] = s[iStep] + ds;
     if( s[iStep-1] < 0.0 ) break;
@@ -836,7 +910,7 @@ for( ;; ) {
     nH[iStep-1] = P[iStep-1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep-1] );
     ne[iStep-1] = nH[iStep-1];
 
-    ds *= MAX_VARIATION;
+    ds *= Params.max_variation;
     if( ds < -max_ds ) ds = - max_ds;
 
     iStep--;
@@ -891,14 +965,14 @@ for( ;; ) {
 
         P[iStep+1] = P[iStep] + ( dPbyds * ds );
         FracDiff = fabs( 1.0 - ( P[iStep+1] / P[iStep] ) );
-        if( FracDiff > EPSILON )
+        if( FracDiff > Params.epsilon )
         {
-            ds /= MAX_VARIATION;
-            if( ds < MIN_DS )
-		ds = MIN_DS;
+            ds /= Params.max_variation;
+            if( ds < Params.min_ds )
+		ds = Params.min_ds;
         }
 
-    } while ( FracDiff > EPSILON && ds > MIN_DS );
+    } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
 
     s[iStep+1] = s[iStep] + ds;
     if( s[iStep+1] > Params.Lfull ) break;
@@ -907,7 +981,7 @@ for( ;; ) {
     nH[iStep+1] = P[iStep+1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep+1] );
     ne[iStep+1] = nH[iStep+1];
 
-    ds *= MAX_VARIATION;
+    ds *= Params.max_variation;
     if( ds > max_ds ) ds = max_ds;
 
     iStep++;
