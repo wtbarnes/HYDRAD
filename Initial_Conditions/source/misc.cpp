@@ -19,16 +19,16 @@
 #include "../../Resources/source/constants.h"
 #include "../../Resources/source/xmlreader.h"
 
-void GetConfigurationParametersXML( PARAMETERS *pParams )
+void GetConfigurationParametersXML( PARAMETERS *pParams, char *config_filename)
 {
 	//Parse XML configuration file
-	TiXmlDocument doc("tests/configurations/initial_conditions.cfg.xml");
+	TiXmlDocument doc(config_filename);
 	
 	//Check if loaded
 	bool loadOK = doc.LoadFile();
 	if(!loadOK)
 	{
-		printf("Failed to load XML configuration file.\n");
+		printf("Failed to load XML configuration file%s.\n",config_filename);
 		//TODO: Exit or break out from here
 	}
 	

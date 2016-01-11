@@ -8,7 +8,7 @@
 // *
 // ****
 
-void GetConfigurationParametersXML( PARAMETERS *pParams );
+void GetConfigurationParametersXML( PARAMETERS *pParams, char *config_filename );
 
 void GenerateSemiCircularLoop( PARAMETERS Params );
 

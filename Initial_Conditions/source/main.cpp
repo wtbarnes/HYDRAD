@@ -12,7 +12,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include <math.h>
+
+#include "boost/program_options.hpp"
 
 #include "params.h"
 #include "ode.h"
@@ -24,7 +27,7 @@
 #include "../../Resources/source/constants.h"
 
 
-int main(void)
+int main(int argc, char **argv)
 {
 double FindHeatingRange( double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, PRADIATION pRadiation, int igdp, double **ppGravity );
 double RefineSolution( double Log_10H0, double *s, double *P, double *T, double *nH, double *ne, PARAMETERS Params, PRADIATION pRadiation, int igdp, double **ppGravity );
@@ -35,8 +38,24 @@ int AddChromospheresOpticallyThick( int iTRplusCoronaplusTRSteps, double *s, dou
 PARAMETERS Params;
 PRADIATION pRadiation;
 
+//Read command line options 
+namespace po = boost::program_options;
+po::options_description description("A hydrostatic code that calculates a set of initial conditions for the HYDRAD hydrodynamic code\n\n(c) Dr. Stephen J. Bradshaw\n\nUsage");
+description.add_options()
+	("help,h","The help message")
+	("config,c",po::value<std::string>()->required(),"Initial conditions configuration file.");
+po::variables_map vm;
+po::store(po::command_line_parser(argc,argv).options(description).run(),vm);
+//Check if the help option is selected
+if(vm.count("help"))
+{
+	std::cout << description;
+	return 0;
+}
+po::notify(vm);
+
 FILE *pFile;
-char szGravityFilename[256];
+char szGravityFilename[256],configFilename[256];
 double **ppGravity;
 int i, igdp;
 
@@ -45,10 +64,13 @@ double Log_10H0, finalH0;
 
 int iTRplusCoronaplusTRSteps, iTotalSteps;
 
+//Copy command line options to variables (as needed)
+std::strcpy(configFilename,vm["config"].as<std::string>().c_str());
+
 printf( "\n\nCalculating initial hydrostatic conditions...\n\n" );
 
 // Get the user-specified parameter values from the configuration file
-GetConfigurationParametersXML( &Params );
+GetConfigurationParametersXML( &Params, configFilename );
 
 // Initialise the radiative losses
 pRadiation = new CRadiation( (char *)"Radiation_Model/config/elements_eq.cfg" );
