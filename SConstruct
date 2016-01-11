@@ -27,7 +27,7 @@ env = Environment(CXX='g++',CXXFLAGS=['-march=native','-mfpmath=sse','-ffast-mat
 #Check OS and change include path
 if 'darwin' in sys.platform:
     env.Append(CPPPATH=['/opt/local/include','/usr/include/malloc'])
-    env.Append(LIBS=['tinyxml'])
+    env.Append(LIBS=['tinyxml','boost_program_options-mt'])
     env.Append(LIBPATH=['/opt/local/lib'])
 elif 'linux' in sys.platform:
     env.Append(CPPPATH=['/usr/include'])
