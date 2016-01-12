@@ -12,12 +12,8 @@ Will Barnes
 #include <stdio.h>
 #include <stdlib.h>
 #include "../Resources/source/file.h"
+#include "../Resources/source/xmlreader.h"
 #include "tinyxml.h"
-
-TiXmlElement * recursive_read(TiXmlElement *, std::string);
-TiXmlElement * check_element(TiXmlElement *, std::string);
-
-using namespace std;
 
 int main()
 {
@@ -37,18 +33,17 @@ int main()
 	bool loadOK = doc.LoadFile();
 	if(!loadOK)
 	{
-		cout << "Failed to load XML configuration file." << endl;
+		std::cout << "Failed to load XML configuration file." << std::endl;
 	}
 	TiXmlElement *root = doc.FirstChildElement();
 	sprintf(outputFn_new,"%s",check_element(recursive_read(root,"ic_root_output"),"ic_root_output")->GetText());	
 	loop_length_new = atof(check_element(recursive_read(root,"loop_length_full"),"loop_length_full")->GetText());
 	
 	//Check for consistency
-	cout << "Old filename " << outputFn_old << endl;
-	cout << "New filename " << outputFn_new << endl;
-	cout << "Old loop length " << loop_length_old << endl;
-	cout << "New loop length " << loop_length_new << endl;
+	std::cout << "Old filename " << outputFn_old << std::endl;
+	std::cout << "New filename " << outputFn_new << std::endl;
+	std::cout << "Old loop length " << loop_length_old << std::endl;
+	std::cout << "New loop length " << loop_length_new << std::endl;
 	
 	return 0;
 }
-

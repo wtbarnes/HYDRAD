@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<root>
+	<atomicDB>/Users/willbarnes/Documents/Rice/Research/HYDRAD/Radiation_Model/atomic_data/</atomicDB>
+	<rangesFile>ranges.rng</rangesFile>
+	<emissivityDir>chianti_v7</emissivityDir>
+	<abundanceFile>asplund</abundanceFile>
+	<rates_balancesDir>chianti_v7</rates_balancesDir>
+	<numElements>15</numElements>
+	<elements>
+		<element name="h" number="1"/>
+		<element name="he" number="2"/>
+		<element name="c" number="6"/>
+		<element name="n" number="7"/>
+		<element name="o" number="8"/>
+		<element name="ne" number="10"/>
+		<element name="na" number="11"/>
+		<element name="mg" number="12"/>
+		<element name="al" number="13"/>
+		<element name="si" number="14"/>
+		<element name="s" number="16"/>
+		<element name="ar" number="18"/>
+		<element name="ca" number="20"/>
+		<element name="fe" number="26"/>
+		<element name="ni" number="28"/>
+	</elements>
+	<density_dependent_rates>false</density_dependent_rates>
+	<minimum_collisional_coupling_timescale>0.01</minimum_collisional_coupling_timescale>
+	<max_optically_thin_density>12.0</max_optically_thin_density>
+	<safety_atomic>1.0</safety_atomic>
+	<cutoff_ion_fraction>1.0e-5</cutoff_ion_fraction>
+	<epsilon_d>0.1</epsilon_d>
+	<epsilon_r>1.8649415311920072</epsilon_r>
+</root>
