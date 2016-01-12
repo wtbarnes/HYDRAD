@@ -36,6 +36,10 @@ class CRadiation {
 
     // Function to initialise the radiation object with a set of elements
     void Initialise( char *szFilename );
+	
+	// Function to initialize the radiation object using XML configuration file
+	// Replace Initialise with this once tests passs
+	void Initialise_withXml( char *szFilename );
 
     // Function to open and read the ranges data file
     void OpenRangesFile( char *szRangesFilename );

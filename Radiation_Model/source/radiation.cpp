@@ -18,6 +18,7 @@
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
 #include "../../Resources/source/constants.h"
+#include "../../Resources/source/xmlreader.h"
 
 
 CRadiation::CRadiation( char *szFilename )
@@ -28,6 +29,33 @@ Initialise( szFilename );
 CRadiation::~CRadiation( void )
 {
 FreeAll();
+}
+
+void CRadiation::Initialise_withXml(char *szFilename)
+{
+	//TODO: make ranges filename, make abundances filename
+	//make emiss, rates, balances for all elements and instantiate element classes
+	//get variables that were previously contained in config.h and put them in the right place
+	
+	//Parse XML configuration file
+	TiXmlDocument doc(szFilename);
+	
+	//Check if loaded
+	bool loadOK = doc.LoadFile();
+	if(!loadOK)
+	{
+		printf("Failed to load XML configuration file %s.\n",szFilename);
+		//TODO: Exit or break out from here
+	}
+	
+	//Get document root
+	TiXmlElement *root = doc.FirstChildElement();
+	
+	//Retrieve configuration elements
+	
+	//Free document tree
+	doc.Clear();
+	 
 }
 
 void CRadiation::Initialise( char *szFilename )
