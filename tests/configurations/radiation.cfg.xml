@@ -1,10 +1,10 @@
 <?xml version="1.0" ?>
 <root>
-	<atomicDB>/Users/willbarnes/Documents/Rice/Research/HYDRAD/Radiation_Model/atomic_data/</atomicDB>
+	<atomicDB>/Users/willbarnes/Documents/Rice/Research/apolloDB/</atomicDB>
 	<rangesFile>ranges.rng</rangesFile>
-	<emissivityDir>chianti_v7</emissivityDir>
-	<abundanceFile>asplund</abundanceFile>
-	<rates_balancesDir>chianti_v7</rates_balancesDir>
+	<emissivityDir>chianti_v7/</emissivityDir>
+	<abundanceFile>asplund.ab</abundanceFile>
+	<rates_balancesDir>chianti_v7/</rates_balancesDir>
 	<numElements>15</numElements>
 	<elements>
 		<element name="h" number="1"/>
