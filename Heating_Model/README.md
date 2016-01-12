@@ -19,3 +19,6 @@ Give inventory of contents of heating model configuration file.
 | `teDepisodic` | float | end of the decay phase of the _i_<sup>th</sup> event (s)|
 
 The last seven entries of the table are repeated `NumActivatedEvents` times, where all the information for the _i_<sup>th</sup> event is on a single line. Additionally, all of the information for the background heating is also on a single line.
+
+## _VAL_ heating model
+If the optically thick option is selected, the heating model reads a VAL heating config file from the `OpticallyThick` directory in the atomic database. We will need to find a way around this when the time comes. Maybe just pass the filename via the normal config file and then make the VAL data a separate list within the config file or something. Probably easier just to pass the path to the optically thick heating config file via the standard heating config file. 
