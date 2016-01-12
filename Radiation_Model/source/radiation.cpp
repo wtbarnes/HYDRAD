@@ -23,8 +23,7 @@
 
 CRadiation::CRadiation( char *szFilename )
 {
-//Initialise( szFilename );
-	Initialise_withXml(szFilename);
+	Initialise(szFilename);
 }
 
 CRadiation::~CRadiation( void )
@@ -32,7 +31,7 @@ CRadiation::~CRadiation( void )
 FreeAll();
 }
 
-void CRadiation::Initialise_withXml(char *szFilename)
+void CRadiation::Initialise(char *szFilename)
 {
 	//Declarations
 	char szAtomicDBFilename[256], szRangesFilename[256], szAbundFilename[256], szEmissFilename[256], szRatesFilename[256], szIonFracFilename[256];
@@ -90,6 +89,8 @@ void CRadiation::Initialise_withXml(char *szFilename)
 		i++;
 	}
 	
+	//TODO: read in remaining options; figure out how to move them where they need to go
+	
 	//Free document tree
 	doc.Clear();
 	
@@ -100,6 +101,7 @@ void CRadiation::Initialise_withXml(char *szFilename)
 	CalculateTotalPhi();
 }
 
+/*
 void CRadiation::Initialise( char *szFilename )
 {
 FILE *pFile;
@@ -157,6 +159,7 @@ OpenRangesFile( szRangesFilename );
 // Calculate the total phi of all radiating elements as a function of temperature and density
 CalculateTotalPhi();
 }
+*/
 
 void CRadiation::OpenRangesFile( char *szRangesFilename )
 {
