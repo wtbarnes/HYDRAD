@@ -45,7 +45,7 @@ This header file sets a series of `#defines` that are used like global variables
 
 | Variable | Type | Description | File Target(s) |
 |:--------:|:-----|:----------- |:-------------- |
-| `#EPSILON` | float | | |
+| `EPSILON` | float | Default value of 0.01 as given in HYDRAD_GUI | |
 
 ### Grid
 
@@ -53,7 +53,7 @@ This header file sets a series of `#defines` that are used like global variables
 |:--------:|:-----|:----------- |:-------------- |
 | `ADAPT` | boolean | | |
 | `MIN_CELLS` | int | | |
-|` MAX_CELLS` | int | | |
+|` MAX_CELLS` | int | Default value of 30,000 as given in HYDRAD_GUI | |
 | `MAX_REFINEMENT_LEVEL` | int | | |
-| `MIN_DS` | float (scientific) | | |
-| `MAX_VARIATION` | float | | |
+| `MIN_DS` | float (scientific) | Default value of `1E0` as given in HYDRAD_GUI | |
+| `MAX_VARIATION` | float | Default value of 1.10 as given in HYDRAD_GUI | |
