@@ -23,7 +23,8 @@
 
 CRadiation::CRadiation( char *szFilename )
 {
-Initialise( szFilename );
+//Initialise( szFilename );
+	Initialise_withXml(szFilename);
 }
 
 CRadiation::~CRadiation( void )
@@ -33,9 +34,10 @@ FreeAll();
 
 void CRadiation::Initialise_withXml(char *szFilename)
 {
-	//TODO: make ranges filename, make abundances filename
-	//make emiss, rates, balances for all elements and instantiate element classes
-	//get variables that were previously contained in config.h and put them in the right place
+	//Declarations
+	char szAtomicDBFilename[256], szRangesFilename[256], szAbundFilename[256], szEmissFilename[256], szRatesFilename[256], szIonFracFilename[256];
+	char tempEmiss[256], tempRates[256], tempBalances[256], tempSymb[256];
+	int i = 0;
 	
 	//Parse XML configuration file
 	TiXmlDocument doc(szFilename);
@@ -52,10 +54,50 @@ void CRadiation::Initialise_withXml(char *szFilename)
 	TiXmlElement *root = doc.FirstChildElement();
 	
 	//Retrieve configuration elements
+	sprintf(szAtomicDBFilename,"%s",check_element(recursive_read(root,"atomicDB"),"atomicDB")->GetText());
+	sprintf(szRangesFilename,"%sranges/%s",szAtomicDBFilename,check_element(recursive_read(root,"rangesFile"),"rangesFile")->GetText());
+	sprintf(tempEmiss,"%semissivities/%s",szAtomicDBFilename,check_element(recursive_read(root,"emissivityDir"),"emissivityDir")->GetText());
+	sprintf(szAbundFilename,"%sabundances/%s",szAtomicDBFilename,check_element(recursive_read(root,"abundanceFile"),"abundanceFile")->GetText());
+	sprintf(tempRates,"%srates/%s",szAtomicDBFilename,check_element(recursive_read(root,"rates_balancesDir"),"rates_balancesDir")->GetText());
+	sprintf(tempBalances,"%sbalances/%s",szAtomicDBFilename,check_element(recursive_read(root,"rates_balancesDir"),"rates_balancesDir")->GetText());
+	NumElements = atoi(check_element(recursive_read(root,"numElements"),"numElements")->GetText());
+	
+	//Allocate memory for array of element objects
+	ppElements = (PPELEMENT)malloc( sizeof( CElement ) * NumElements ); // Allocate sufficient memory to hold the pointers to each element object
+	pZ = (int*)malloc( sizeof(int) * NumElements ); // Allocate sufficient memory to hold the list of atomic numbers
+	
+	//Loop over elements
+	TiXmlElement *elementList = check_element(recursive_read(root,"elements"),"elements");
+	for(TiXmlElement *child = elementList->FirstChildElement(); child != NULL; child=child->NextSiblingElement())
+	{
+		//Check counter
+		if(i>=NumElements)
+		{
+			printf("Warning: Element list length > NumElements variable. Some elements may not be read.\n\n");
+			break;
+		}
+		//Get atomic number
+		pZ[i] = atoi(child->Attribute("number"));
+		//Get atomic symbol
+		sprintf(tempSymb,"%s",child->Attribute("name"));
+	    // Construct the filenames
+	    sprintf( szEmissFilename,"%s%s.em",tempEmiss,tempSymb);
+	    sprintf( szRatesFilename,"%s%s.rts",tempRates,tempSymb);
+	    sprintf( szIonFracFilename,"%s%s.bal",tempBalances,tempSymb);
+	    // Instantiate each element object
+	    ppElements[i] = new CElement( pZ[i], szRangesFilename, szAbundFilename, szEmissFilename, szRatesFilename, szIonFracFilename );
+		//Increment counter
+		i++;
+	}
 	
 	//Free document tree
 	doc.Clear();
-	 
+	
+	// Open the temperature and density ranges file and allocate memory to store these quantities
+	OpenRangesFile( szRangesFilename );
+	
+	// Calculate the total phi of all radiating elements as a function of temperature and density
+	CalculateTotalPhi();
 }
 
 void CRadiation::Initialise( char *szFilename )
