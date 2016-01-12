@@ -28,7 +28,7 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *config_filename)
 	bool loadOK = doc.LoadFile();
 	if(!loadOK)
 	{
-		printf("Failed to load XML configuration file%s.\n",config_filename);
+		printf("Failed to load XML configuration file %s.\n",config_filename);
 		//TODO: Exit or break out from here
 	}
 	
