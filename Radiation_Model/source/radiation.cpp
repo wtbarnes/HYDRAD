@@ -14,7 +14,6 @@
 #include <math.h>
 
 #include "radiation.h"
-#include "config.h"
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
 #include "../../Resources/source/constants.h"
@@ -85,11 +84,14 @@ void CRadiation::Initialise(char *szFilename)
 	    sprintf( szIonFracFilename,"%s%s.bal",tempBalances,tempSymb);
 	    // Instantiate each element object
 	    ppElements[i] = new CElement( pZ[i], szRangesFilename, szAbundFilename, szEmissFilename, szRatesFilename, szIonFracFilename );
+		// Set initial configuration elements from file
+		ppElements[i]->SetConfigVars(root);
 		//Increment counter
 		i++;
 	}
 	
 	//TODO: read in remaining options; figure out how to move them where they need to go
+	max_optically_thin_density = atof(check_element(recursive_read(root,"max_optically_thin_density"),"max_optically_thin_density")->GetText());
 	
 	//Free document tree
 	doc.Clear();
@@ -390,8 +392,8 @@ if( i == NumElements ) return 0.0;
 
 fEmiss = ppElements[i]->GetEmissivity( iIon, flog_10T, flog_10n );
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 
@@ -412,8 +414,8 @@ if( i == NumElements ) return 0.0;
 
 fEmiss = ppElements[i]->GetEmissivity( flog_10T, flog_10n );
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 
@@ -510,8 +512,8 @@ FitPolynomial2D( x1, x2, y, 4, 4, flog_10T, flog_10n, &result, &error );
 // Check the value of phi( n, T ) is physically realistic
 if( result < 0.0 ) result = 0.0;
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 
@@ -563,8 +565,8 @@ if( i == NumElements ) return 0.0;
 
 fEmiss = ppElements[i]->GetEmissivity( iIon, flog_10T, flog_10n, ni );
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 
@@ -585,8 +587,8 @@ if( i == NumElements ) return 0.0;
 
 fEmiss = ppElements[i]->GetEmissivity( flog_10T, flog_10n, pni );
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 
@@ -602,8 +604,8 @@ int i;
 for( i=0; i<NumElements; i++ )
     fEmiss += ppElements[i]->GetEmissivity( flog_10T, flog_10n, ppni[i] );
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 
@@ -656,8 +658,8 @@ else
 
 fEmiss = chi * pow( 10.0, (alpha*flog_10T) );
 
-if( flog_10n > MAX_OPTICALLY_THIN_DENSITY )
-    flog_10n = MAX_OPTICALLY_THIN_DENSITY;
+if( flog_10n > max_optically_thin_density )
+    flog_10n = max_optically_thin_density;
 
 n = pow( 10.0, flog_10n );
 

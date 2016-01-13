@@ -19,6 +19,9 @@ class CRadiation {
     // The number of elements for which ion fractional populations are available
     int NumElements;
 	
+	// Config variables--originally set in config.h
+	double max_optically_thin_density; //log10 of maximum optically thin density value
+	
     // Pointer to an array of pointers of type PELEMENT
     PPELEMENT ppElements;
 	

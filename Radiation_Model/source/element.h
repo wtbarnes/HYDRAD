@@ -8,6 +8,7 @@
 // *
 // ****
 
+#include "tinyxml.h"
 
 class CElement {
 
@@ -25,6 +26,10 @@ class CElement {
     // The temperature and density values in log_10 form
     int NumTemp, NumDen;
     double *pTemp, *pDen;
+	
+	// Configuration variables originally pulled from config.h
+	bool density_dependent_rates;
+	double minimum_collisional_coupling_time_scale, safety_atomic, cutoff_ion_fraction, epsilon_d, epsilon_r;
 		
     // Pointer to an array of pointers, each pointing to the emissivity
     // data for an individual ion held in a NumTemp * NumDen size array
@@ -78,6 +83,9 @@ class CElement {
 
     // Function to initialise the element object
     void Initialise( int iZ, char *szRangesFilename, char *szAbundFilename, char *szEmissFilename, char *szRatesFilename, char *szIonFracFilename );
+	
+	// Function to set configuration variables
+	void SetConfigVars(TiXmlElement * root);
 
     // Function to return the element abundance
     double GetAbundance( void );

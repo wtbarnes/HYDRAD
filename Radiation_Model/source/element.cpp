@@ -15,10 +15,10 @@
 #include <math.h>
 
 #include "element.h"
-#include "config.h"
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
 #include "../../Resources/source/constants.h"
+#include "../../Resources/source/xmlreader.h"
 
 
 CElement::CElement( int iZ, char *szRangesFilename, char *szAbundFilename, char *szEmissFilename, char *szRatesFilename, char *szIonFracFilename )
@@ -48,6 +48,17 @@ CalculatePhi();
 
 // Calculate the total phi of all radiating elements as a function of temperature and density
 CalculateTotalPhi();
+}
+
+void CElement::SetConfigVars(TiXmlElement *root)
+{
+	//Set all config variables needed in the CElement class
+	density_dependent_rates = string2bool(check_element(recursive_read(root,"density_dependent_rates"),"density_dependent_rates")->GetText());
+	minimum_collisional_coupling_time_scale = atof(check_element(recursive_read(root,"minimum_collisional_coupling_time_scale"),"minimum_collisional_coupling_time_scale")->GetText());
+	safety_atomic = atof(check_element(recursive_read(root,"safety_atomic"),"safety_atomic")->GetText());
+	cutoff_ion_fraction = atof(check_element(recursive_read(root,"cutoff_ion_fraction"),"cutoff_ion_fraction")->GetText());
+	epsilon_d = atof(check_element(recursive_read(root,"epsilon_d"),"epsilon_d")->GetText());
+	epsilon_r = atof(check_element(recursive_read(root,"epsilon_r"),"epsilon_r")->GetText());
 }
 
 void CElement::OpenRangesFile( char *szRangesFilename )
@@ -223,12 +234,15 @@ char buffer[8];
 ppIonRate = (double**)malloc( sizeof(double) * Z );
 ppRecRate = (double**)malloc( sizeof(double) * Z );
 
-#ifdef DENSITY_DEPENDENT_RATES
+if(density_dependent_rates)
+{
     // Calculate the 2D array sizes
     NumTempxNumDen = NumTemp * NumDen;
-#else // DENSITY_DEPENDENT_RATES
-    NumTempxNumDen = NumTemp; // NumDen = 1
-#endif // DENSITY_DEPENDENT_RATES
+}
+else
+{
+	NumTempxNumDen = NumTemp; // NumDen = 1
+}
 
 // Open the rates file
 pFile = fopen( szRatesFilename, "r" );
@@ -273,12 +287,15 @@ int i, j, NumTempxNumDen;
 // Allocate arrays to hold the pointers to the fractional populations for each ion
 ppIonFrac = (double**)malloc( sizeof(double*) * ( Z + 1 ) );
 
-#ifdef DENSITY_DEPENDENT_RATES
+if(density_dependent_rates)
+{
     // Calculate the 2D array sizes
     NumTempxNumDen = NumTemp * NumDen;
-#else // DENSITY_DEPENDENT_RATES
+}
+else
+{
     NumTempxNumDen = NumTemp; // NumDen = 1
-#endif // DENSITY_DEPENDENT_RATES
+}
 
 // Allocate an array for each ion to contain the fractional population of that ion as
 // a function of temperature
@@ -322,11 +339,14 @@ for( i=0; i<NumIons; i++)
     for( j=0; j<NumTempxNumDen; j++ )
     {
         // Calculate the factor phi( n, T ) for the current ion at the current temperature and density
-#ifdef DENSITY_DEPENDENT_RATES
-	ppPhi[i][j] = GetIonEmissivity( pSpecNum[i], pTemp[indexTemp], pDen[indexDen] ) * GetEquilIonFrac( pSpecNum[i], pTemp[indexTemp], pDen[indexDen] );
-#else // DENSITY_DEPENDENT_RATES
-	ppPhi[i][j] = GetIonEmissivity( pSpecNum[i], pTemp[indexTemp], pDen[indexDen] ) * GetEquilIonFrac( pSpecNum[i], pTemp[indexTemp] );
-#endif // DENSITY_DEPENDENT_RATES
+		if(density_dependent_rates)
+		{
+			ppPhi[i][j] = GetIonEmissivity( pSpecNum[i], pTemp[indexTemp], pDen[indexDen] ) * GetEquilIonFrac( pSpecNum[i], pTemp[indexTemp], pDen[indexDen] );
+		}
+		else
+		{
+			ppPhi[i][j] = GetIonEmissivity( pSpecNum[i], pTemp[indexTemp], pDen[indexDen] ) * GetEquilIonFrac( pSpecNum[i], pTemp[indexTemp] );
+		}
         indexTemp++;
                 
         if( indexTemp == NumTemp )
@@ -702,7 +722,7 @@ y[4] = ppIonFrac[i][j+1];
 FitPolynomial( x, y, 4, flog_10T, &IonFrac, &error );
 
 // Ensure the minimum ion fraction remains above the cut-off and is physically realistic
-if( IonFrac < CUTOFF_ION_FRACTION )
+if( IonFrac < cutoff_ion_fraction )
     IonFrac = 0.0;
 
 return IonFrac;
@@ -794,7 +814,7 @@ for( l=1; l<=4; l++ )
 FitPolynomial2D( x1, x2, y, 4, 4, flog_10T, flog_10n, &IonFrac, &error );
 
 // Ensure the minimum ion fraction remains above the cut-off and is physically realistic
-if( IonFrac < CUTOFF_ION_FRACTION )
+if( IonFrac < cutoff_ion_fraction )
     IonFrac = 0.0;
 
 return IonFrac;
@@ -1152,24 +1172,30 @@ for( iIndex=0; iIndex<=Z; iIndex++ )
 
     if( iSpecNum > 1 )
     {
-#ifdef DENSITY_DEPENDENT_RATES
-        GetRates( iSpecNum-1, flog_10T, flog_10n, &IonRate[0], &RecRate[0] );
-#else // DENSITY_DEPENDENT_RATES
-        GetRates( iSpecNum-1, flog_10T, &IonRate[0], &RecRate[0] );
-#endif // DENSITY_DEPENDENT_RATES
-	term2 = pni2[iIndex-1] * IonRate[0];
+		if(density_dependent_rates)
+		{
+	        GetRates( iSpecNum-1, flog_10T, flog_10n, &IonRate[0], &RecRate[0] );
+		}
+		else
+		{
+	        GetRates( iSpecNum-1, flog_10T, &IonRate[0], &RecRate[0] );
+		}
+		term2 = pni2[iIndex-1] * IonRate[0];
     }
     else
         term2 = 0.0;
 	
     if( iSpecNum < Z+1 )
     {
-#ifdef DENSITY_DEPENDENT_RATES
-        GetRates( iSpecNum, flog_10T, flog_10n, &IonRate[1], &RecRate[1] );
-#else // DENSITY_DEPENDENT_RATES
-        GetRates( iSpecNum, flog_10T, &IonRate[1], &RecRate[1] );
-#endif // DENSITY_DEPENDENT_RATES
-	term3 = pni2[iIndex+1] * RecRate[1];
+		if(density_dependent_rates)
+		{
+	        GetRates( iSpecNum, flog_10T, flog_10n, &IonRate[1], &RecRate[1] );
+		}
+		else
+		{
+	        GetRates( iSpecNum, flog_10T, &IonRate[1], &RecRate[1] );
+		}
+		term3 = pni2[iIndex+1] * RecRate[1];
     }
     else
         term3 = 0.0;
@@ -1180,22 +1206,25 @@ for( iIndex=0; iIndex<=Z; iIndex++ )
 
     pdnibydt[iIndex] = term1 + term5;
 	
-    if( term5 && pni2[iIndex] > CUTOFF_ION_FRACTION )
+    if( term5 && pni2[iIndex] > cutoff_ion_fraction )
     {
         term5 = fabs( term5 );
 
-        delta_t1 = SAFETY_ATOMIC * ( EPSILON_D / term5 );
-        delta_t2 = SAFETY_ATOMIC * pni2[iIndex] * ( EPSILON_R / term5 );
+        delta_t1 = safety_atomic * ( epsilon_d / term5 );
+        delta_t2 = safety_atomic * pni2[iIndex] * ( epsilon_r / term5 );
 
         TimeScale = min( delta_t1, delta_t2 );
 
-        if( TimeScale < MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE )
+        if( TimeScale < minimum_collisional_coupling_time_scale )
         {
-#ifdef DENSITY_DEPENDENT_RATES
-            pni2[iIndex] = GetEquilIonFrac( iIndex+1, flog_10T, flog_10n );
-#else // DENSITY_DEPENDENT_RATES
-            pni2[iIndex] = GetEquilIonFrac( iIndex+1, flog_10T );
-#endif // DENSITY_DEPENDENT_RATES
+			if(density_dependent_rates)
+			{
+	            pni2[iIndex] = GetEquilIonFrac( iIndex+1, flog_10T, flog_10n );
+			}
+			else
+			{
+	            pni2[iIndex] = GetEquilIonFrac( iIndex+1, flog_10T );
+			}
             pdnibydt[iIndex] = 0.0;
             TimeScale = LARGEST_DOUBLE;
         }
