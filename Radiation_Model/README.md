@@ -34,16 +34,16 @@ TODO: Here, list all of the `#ifdef` vars that get defined. May have to look at 
 
 | Variable | Type | Description | File Target(s) |
 |:--------:|:-----|:----------- |:-------------- |
-| `DENSITY_DEPENDENT_RATES` | boolean | Radiation; | |
-| `MINIMUM_COLLISIONAL_COUPLING_TIMESCALE` | float | Collisions; | |
+| `DENSITY_DEPENDENT_RATES` | boolean | Radiation; | `Radiation_Model/source/element.cpp`; part of the `CElement` class|
+| `MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE` | float | Collisions; | `Radiation_Model/source/element.cpp`,`HYDRAD/source/eqns.cpp` |
  
 
 ### Solver
 
 | Variable | Type | Description | File Target(s) |
 |:--------:|:-----|:----------- |:-------------- |
-| `MAX_OPTICALLY_THIN_DENSITY` | float | | |
-| `SAFETY_ATOMIC` | | | |
-| `CUTOFF_ION_FRACTION` | | | |
-| `EPSILON_D` | | | |
-| `EPSILON_R` | | | |
+| `MAX_OPTICALLY_THIN_DENSITY` | float | log_10 of the max optically thin density | `Radiation_Model/source/radiation.cpp`; part of the `CRadiation` class |
+| `SAFETY_ATOMIC` | float | | `Radiation_Model/source/element.cpp` |
+| `CUTOFF_ION_FRACTION` | float |  | `Radiation_Model/source/element.cpp`,`Radiation_Model/source/ionfrac.cpp` |
+| `EPSILON_D` | float | | `Radiation_Model/source/element.cpp` |
+| `EPSILON_R` | float | | `Radiation_Model/source/element.cpp` |
