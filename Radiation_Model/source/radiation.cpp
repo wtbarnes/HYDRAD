@@ -59,6 +59,7 @@ void CRadiation::Initialise(char *szFilename)
 	sprintf(tempRates,"%srates/%s",szAtomicDBFilename,check_element(recursive_read(root,"rates_balancesDir"),"rates_balancesDir")->GetText());
 	sprintf(tempBalances,"%sbalances/%s",szAtomicDBFilename,check_element(recursive_read(root,"rates_balancesDir"),"rates_balancesDir")->GetText());
 	NumElements = atoi(check_element(recursive_read(root,"numElements"),"numElements")->GetText());
+	max_optically_thin_density = atof(check_element(recursive_read(root,"max_optically_thin_density"),"max_optically_thin_density")->GetText());
 	
 	//Allocate memory for array of element objects
 	ppElements = (PPELEMENT)malloc( sizeof( CElement ) * NumElements ); // Allocate sufficient memory to hold the pointers to each element object
@@ -90,9 +91,6 @@ void CRadiation::Initialise(char *szFilename)
 		i++;
 	}
 	
-	//TODO: read in remaining options; figure out how to move them where they need to go
-	max_optically_thin_density = atof(check_element(recursive_read(root,"max_optically_thin_density"),"max_optically_thin_density")->GetText());
-	
 	//Free document tree
 	doc.Clear();
 	
@@ -102,66 +100,6 @@ void CRadiation::Initialise(char *szFilename)
 	// Calculate the total phi of all radiating elements as a function of temperature and density
 	CalculateTotalPhi();
 }
-
-/*
-void CRadiation::Initialise( char *szFilename )
-{
-FILE *pFile;
-char buffer1[16], buffer2[16], buffer3[16], buffer4[16];
-char szRangesFilename[256], szAbundFilename[256], szEmissFilename[256], szRatesFilename[256], szIonFracFilename[256];
-int i;
-
-pFile = fopen( szFilename, "r" );
-
-// Get the range definition filename
-fscanf( pFile, "%s", buffer1 );
-sprintf( szRangesFilename, "Radiation_Model/atomic_data/ranges/%s.rng", buffer1 );
-
-// Get the ion emissivities
-fscanf( pFile, "%s", buffer2 );
-
-// Get the abundance set
-fscanf( pFile, "%s", buffer3 );
-sprintf( szAbundFilename, "Radiation_Model/atomic_data/abundances/%s.ab", buffer3 );
-
-// Get the ionisation and recombination data
-fscanf( pFile, "%s", buffer4 );
-
-// Get the number of elements from the file
-fscanf( pFile, "%i", &NumElements );
-
-// Allocate sufficient memory to hold the pointers to each element object
-ppElements = (PPELEMENT)malloc( sizeof( CElement ) * NumElements );
-
-// Allocate sufficient memory to hold the list of atomic numbers
-pZ = (int*)malloc( sizeof(int) * NumElements );
-
-for( i=0; i<NumElements; i++ )
-{
-    // Get the element symbol
-    fscanf( pFile, "%s", buffer1 );
-	
-    // Get the atomic number
-    fscanf( pFile, "%i", &(pZ[i]) );
-	
-    // Construct the filenames
-    sprintf( szEmissFilename, "Radiation_Model/atomic_data/emissivities/%s/%s.em", buffer2, buffer1 );
-    sprintf( szRatesFilename, "Radiation_Model/atomic_data/rates/%s/%s.rts", buffer4, buffer1 );
-    sprintf( szIonFracFilename, "Radiation_Model/atomic_data/balances/%s/%s.bal", buffer4, buffer1 );
-
-    // Instantiate each element object
-    ppElements[i] = new CElement( pZ[i], szRangesFilename, szAbundFilename, szEmissFilename, szRatesFilename, szIonFracFilename );
-}
-
-fclose( pFile );
-
-// Open the temperature and density ranges file and allocate memory to store these quantities
-OpenRangesFile( szRangesFilename );
-
-// Calculate the total phi of all radiating elements as a function of temperature and density
-CalculateTotalPhi();
-}
-*/
 
 void CRadiation::OpenRangesFile( char *szRangesFilename )
 {
