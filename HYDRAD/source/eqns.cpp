@@ -57,9 +57,9 @@ return 23.0 - log( term1 );
 
 
 // Constructor
-CEquations::CEquations( void )
+CEquations::CEquations( char *configFilename, char *rad_configFilename )
 {
-Initialise();
+Initialise(configFilename, rad_configFilename);
 }
 
 // Destructor
@@ -68,7 +68,7 @@ CEquations::~CEquations( void )
 FreeAll();
 }
 
-void CEquations::Initialise( void )
+void CEquations::Initialise( char *configFilename, char *rad_configFilename )
 {
 FILE *pFile;
 double fTemp;
