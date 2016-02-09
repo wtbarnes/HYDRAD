@@ -17,6 +17,9 @@
 
 int main( int argc, char **argv )
 {
+	//TODO: add additional radiation configuration filename for eq, neq
+	//need to pass through mesh and eqns, cpp and h
+	
 	char configFilename[256],rad_configFilename[256];
 	PMESH pMesh;
 

@@ -74,6 +74,9 @@ FILE *pFile;
 double fTemp;
 int i, iTemp;
 
+//TODO: read in parameters from XML config file
+//TODO: add all bool parameters to Params structure
+
 #ifdef USE_KINETIC_MODEL
 ppCellList = NULL;
 #endif // USE_KINETIC_MODEL
@@ -115,8 +118,10 @@ for( i=0; i<igdp; i++ )
 fclose( pFile );
 
 // Create the heating object and set the lower radiation temperature boundary
+//TODO: feed heating node of xml input to heating class
 pHeat = new CHeat( (char *)"Heating_Model/config/heating_model.cfg", Params.L );
 
+//TODO:expose root atomic db file string
 // Create the radiation objects
 pRadiation = new CRadiation( (char *)"Radiation_Model/config/elements_neq.cfg" );
 pRadiation2 = new CRadiation( (char *)"Radiation_Model/config/elements_eq.cfg" );

@@ -1,0 +1,56 @@
+<?xml version="1.0" ?>
+<root>
+	<!-- input options -->
+	<ic_profiles>Initial_Conditions/profiles/initial.amr</ic_profiles>
+	<tabulated_gravity_file>Initial_Conditions/profiles/initial.amr.gravity</tabulated_gravity_file>
+	<duration>200.0</duration>
+	<!-- output options -->
+	<file_output_period>10</file_output_period>
+	<output_every_n_time_steps>1000</output_every_n_time_steps>
+	<write_file_physical>True</write_file_physical>
+	<write_file_ion_populations>False</write_file_ion_populations>
+	<write_file_scales>False</write_file_scales>
+	<write_file_terms>False</write_file_terms>
+	<!-- physics options -->
+	<heated_species>0</heated_species>
+	<non_equilibrium_radiation>False</non_equilibrium_radiation>
+	<use_power_law_radiative_losses>False</use_power_law_radiative_losses>
+	<decouple_ionisation_state_solver>False</decouple_ionisation_state_solver>
+	<density_dependent_rates>False</density_dependent_rates>
+	<optically_thick_radiation>False</optically_thick_radiation>
+	<use_kinetic_model>False</use_kinetic_model>
+	<minimum_collisional_coupling_timescale>0.01</minimum_collisional_coupling_timescale>
+	<force_single_fluid>False</force_single_fluid>
+	<!-- solver options -->
+	<safety_radiation>1.0</safety_radiation>
+	<safety_conduction>1.0</safety_conduction>
+	<safety_advection>1.0</safety_advection>
+	<safety_viscosity>1.0</safety_viscosity>
+	<time_step_increase_limit>1.05</time_step_increase_limit>
+	<numerical_viscosity>False</numerical_viscosity>
+	<relative_viscous_time_scale>1.0</relative_viscous_time_scale>
+	<minimum_radiation_temperature>2E4</minimum_radiation_temperature>
+	<zero_over_temperature_interval>1E3</zero_over_temperature_interval>
+	<minimum_temperature>1E4</minimum_temperature>
+	<!-- grid options -->
+	<adapt>True</adapt>
+	<max_refinement_level>12</max_refinement_level>
+	<min_frac_diff>0.05</min_frac_diff>
+	<max_frac_diff>0.1</max_frac_diff>
+	<refine_on_density>true</refine_on_density>
+	<refine_on_electron_energy>True</refine_on_electron_energy>
+	<refine_on_hydrogen_energy>False</refine_on_hydrogen_energy>
+	<linear_restriction>False</linear_restriction>
+	<enforce_conservation>True</enforce_conservation>
+	<!-- heating -->
+	<heating>
+		<duration></duration>
+		<bg_loc></bg_loc>
+		<bg_spread></bg_spread>
+		<bg_magnitude></bg_magnitude>
+		<num_events></num_events>
+		<events>
+			<event loc="" spread="" magnitude="" rise_start="" rise_end="" decay_start="" decay_end="" />
+		</events>
+	</heating>
+</root>
