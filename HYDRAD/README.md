@@ -34,8 +34,8 @@ This header file sets a series of `#defines` that are used like global variables
 | `DENSITY_DEPENDENT_RATES` | boolean | Radiation; | |
 | `OPTICALLY_THICK_RADIATION` | boolean | Radiation; | |
 | `USE_KINETIC_MODEL` | boolean | Thermal Conduction; turn on kinetic effects | |
-| `USE_TABULATED_GRAVITY` | boolean | Gravity; | |
-| `TABULATED_GRAVITY_FILE` | `char` array | Gravity; | |
+| ~~`USE_TABULATED_GRAVITY`~~ | boolean | Gravity; | |
+| ~~`TABULATED_GRAVITY_FILE`~~ | `char` array | Gravity; | |
 | `MINIMUM_COLLISIONAL_COUPLING_TIMESCALE` | float | Collisions; | |
 | `FORCE_SINGLE_FLUID` | boolean | Collisions; | |
 
