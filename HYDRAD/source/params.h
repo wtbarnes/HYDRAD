@@ -12,20 +12,10 @@
 #include "config.h"
 
 #include "../../Heating_Model/source/heat.h"
-
-#ifdef NON_EQUILIBRIUM_RADIATION
 #include "../../Radiation_Model/source/ionfrac.h"
-#else // NON_EQUILIBRIUM_RADIATION
 #include "../../Radiation_Model/source/radiation.h"
-#endif // NON_EQUILIBRIUM_RADIATION
-
-#ifdef OPTICALLY_THICK_RADIATION
 #include "../../Radiation_Model/source/OpticallyThick/OpticallyThickIon.h"
-#endif // OPTICALLY_THICK_RADIATION
-
-#ifdef USE_KINETIC_MODEL
 #include "../../Kinetic_Model/source/kinetic.h"
-#endif // USE_KINETIC_MODEL
 
 // **** PARAMETERS STRUCTURE ****
 
@@ -43,6 +33,19 @@ struct Parameters {
 
     // Duration and profile output period
     double Duration, OutputPeriod;
+	
+	//Output options
+	int output_every_n_time_steps;
+	bool write_file_physical, write_file_ion_populations, write_file_scales, write_file_terms;
+	//Physics options
+	int heated_species;
+	double minimum_collisional_coupling_timescale
+	bool non_equilibrium_radiation, use_power_law_radiative_losses, decouple_ionisation_state_solver, density_dependent_rates, optically_thick_radiation, use_kinetic_model, force_single_fluid;
+	//Solver options
+	double safety_radiation, safety_conduction, safety_advection, safety_viscosity, time_step_increase_limit, relative_viscous_time_scale, minimum_radiation_temperature, zero_over_temperature_interval, minimum_temperature;
+	bool numerical_viscosity;
+	//Grid Options
+	bool adapt, refine_on_density, refine_on_electron_energy, refine_on_hydrogen_energy, linear_restriction, enforce_conservation;
 
 };
 

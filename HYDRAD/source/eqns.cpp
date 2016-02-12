@@ -97,24 +97,43 @@ sprintf(Params.GravityFilename,"%s",check_element(recursive_read(root,"tabulated
 Params.Duration = atof(check_element(recursive_read(root,"duration"),"duration")->GetText());
 //Output options
 Params.OutputPeriod = atof(check_element(recursive_read(root,"file_output_period"),"file_output_period")->GetText());
+Params.output_every_n_time_steps = atoi(check_element(recursive_read(root,"output_every_n_time_steps"),"output_every_n_time_steps")->GetText());
+Params.write_file_physical = string2bool(check_element(recursive_read(root,"write_file_physical"),"write_file_physical")->GetText());
+Params.write_file_ion_populations = string2bool(check_element(recursive_read(root,"write_file_ion_populations"),"write_file_ion_populations")->GetText());
+Params.write_file_scales = string2bool(check_element(recursive_read(root,"write_file_scales"),"write_file_scales")->GetText());
+Params.write_file_terms = string2bool(check_element(recursive_read(root,"write_file_terms"),"write_file_terms")->GetText());
+//Physics options
+Params.heated_species = atoi(check_element(recursive_read(root,"heated_species"),"heated_species")->GetText());
+Params.minimum_collisional_coupling_timescale = atof(check_element(recursive_read(root,"minimum_collisional_coupling_timescale"),"minimum_collisional_coupling_timescale")->GetText());
+Params.non_equilibrium_radiation = string2bool(check_element(recursive_read(root,"non_equilibrium_radiation"),"non_equilibrium_radiation")->GetText());
+Params.use_power_law_radiative_losses = string2bool(check_element(recursive_read(root,"use_power_law_radiative_losses"),"use_power_law_radiative_losses")->GetText());
+Params.decouple_ionisation_state_solver = string2bool(check_element(recursive_read(root,"decouple_ionisation_state_solver"),"decouple_ionisation_state_solver")->GetText());
+Params.density_dependent_rates = string2bool(check_element(recursive_read(root,"density_dependent_rates"),"density_dependent_rates")->GetText());
+Params.optically_thick_radiation = string2bool(check_element(recursive_read(root,"optically_thick_radiation"),"optically_thick_radiation")->GetText());
+Params.use_kinetic_model = string2bool(check_element(recursive_read(root,"use_kinetic_model"),"use_kinetic_model")->GetText());
+Params.force_single_fluid = string2bool(check_element(recursive_read(root,"force_single_fluid"),"force_single_fluid")->GetText());
+//solver options
+Params.safety_radiation = atof(check_element(recursive_read(root,"safety_radiation"),"safety_radiation")->GetText());
+Params.safety_conduction = atof(check_element(recursive_read(root,"safety_conduction"),"safety_conduction")->GetText());
+Params.safety_advection = atof(check_element(recursive_read(root,"safety_advection"),"safety_advection")->GetText());
+Params.safety_viscosity = atof(check_element(recursive_read(root,"safety_viscosity"),"safety_viscosity")->GetText());
+Params.time_step_increase_limit = atof(check_element(recursive_read(root,"time_step_increase_limit"),"time_step_increase_limit")->GetText());
+Params.relative_viscous_time_scale = atof(check_element(recursive_read(root,"relative_viscous_time_scale"),"relative_viscous_time_scale")->GetText());
+Params.minimum_radiation_temperature = atof(check_element(recursive_read(root,"minimum_radiation_temperature"),"minimum_radiation_temperature")->GetText());
+Params.zero_over_temperature_interval = atof(check_element(recursive_read(root,"zero_over_temperature_interval"),"zero_over_temperature_interval")->GetText());
+Params.minimum_temperature = atof(check_element(recursive_read(root,"minimum_temperature"),"minimum_temperature")->GetText());
+Params.numerical_viscosity = string2bool(check_element(recursive_read(root,"numerical_viscosity"),"numerical_viscosity")->GetText());
+//grid options
+Params.max_refinement_level = atoi(check_element(recursive_read(root,"max_refinement_level"),"max_refinement_level")->GetText());
+Params.min_frac_diff = atof(check_element(recursive_read(root,"min_frac_diff"),"min_frac_diff")->GetText());
+Params.max_frac_diff = atof(check_element(recursive_read(root,"max_frac_diff"),"max_frac_diff")->GetText(max
+Params.adapt = string2bool(check_element(recursive_read(root,"adapt"),"adapt")->GetText());
+Params.refine_on_density = string2bool(check_element(recursive_read(root,"refine_on_density"),"refine_on_density")->GetText());
+Params.refine_on_electron_energy = string2bool(check_element(recursive_read(root,"refine_on_electron_energy"),"refine_on_electron_energy")->GetText());
+Params.refine_on_hydrogen_energy = string2bool(check_element(recursive_read(root,"refine_on_hydrogen_energy"),"refine_on_hydrogen_energy")->GetText());
+Params.linear_restriction = string2bool(check_element(recursive_read(root,"linear_restriction"),"linear_restriction")->GetText());
+Params.enforce_conservation = string2bool(check_element(recursive_read(root,"enforce_conservation"),"enforce_conservation")->GetText());
 
-
-
-#ifdef USE_KINETIC_MODEL
-ppCellList = NULL;
-#endif // USE_KINETIC_MODEL
-
-// Get the HYDRAD initial conditions
-pFile = fopen( "HYDRAD/config/HYDRAD.cfg", "r" );
-// Get the initial profiles
-fscanf( pFile, "%s", Params.Profiles );
-// Get the gravity look-up table filename
-fscanf( pFile, "%s", Params.GravityFilename );
-// Get the duration
-ReadDouble( pFile, &Params.Duration );
-// Get the output period
-ReadDouble( pFile, &Params.OutputPeriod );
-fclose( pFile );
 
 // Get the loop length from the profiles file
 pFile = fopen( Params.Profiles, "r" );
@@ -122,11 +141,6 @@ ReadDouble( pFile, &fTemp );
 fscanf( pFile, "%i", &iTemp );
 ReadDouble( pFile, &Params.L );
 fclose( pFile );
-
-#ifdef USE_KINETIC_MODEL
-// Get the tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
-Get_SH_Table();
-#endif // USE_KINETIC_MODEL
 
 // Initialise the gravity look-up table
 pFile = fopen( Params.GravityFilename, "r" );
@@ -140,14 +154,20 @@ for( i=0; i<igdp; i++ )
 }
 fclose( pFile );
 
+#ifdef USE_KINETIC_MODEL
+ppCellList = NULL;
+// Get the tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
+Get_SH_Table();
+#endif // USE_KINETIC_MODEL
+
 // Create the heating object and set the lower radiation temperature boundary
 //TODO: feed heating node of xml input to heating class
 pHeat = new CHeat( (char *)"Heating_Model/config/heating_model.cfg", Params.L );
 
 //TODO:expose root atomic db file string
 // Create the radiation objects
-pRadiation = new CRadiation( (char *)"Radiation_Model/config/elements_neq.cfg" );
-pRadiation2 = new CRadiation( (char *)"Radiation_Model/config/elements_eq.cfg" );
+pRadiation = new CRadiation(rad_config_neqFilename);
+pRadiation2 = new CRadiation(rad_config_eqFilename);
 lower_radiation_temperature_boundary = MINIMUM_RADIATION_TEMPERATURE + ZERO_OVER_TEMPERATURE_INTERVAL;
 
 #ifdef OPTICALLY_THICK_RADIATION
@@ -156,6 +176,10 @@ pHI = new COpticallyThickIon( 1, (char *)"h_1", (char *)"Radiation_Model/atomic_
 pMgII = new COpticallyThickIon( 12, (char *)"mg_2", (char *)"Radiation_Model/atomic_data/abundances/asplund.ab" );
 pCaII = new COpticallyThickIon( 20, (char *)"ca_2", (char *)"Radiation_Model/atomic_data/abundances/asplund.ab" );
 #endif // OPTICALLY_THICK_RADIATION
+
+//Free document tree
+doc.Clear();
+
 }
 
 void CEquations::FreeAll( void )
