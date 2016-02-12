@@ -7,8 +7,8 @@
 	<foot_point_height>5.0e+8</foot_point_height>
 	<foot_point_temperature>2.0e+4</foot_point_temperature>
 	<foot_point_density>1.0e+11</foot_point_density>
-	<heating_location>3e+9</heating_location>
-	<heating_scale_height>1e+308</heating_scale_height>
+	<heating_loc>3e+9</heating_loc>
+	<heating_spread>1e+308</heating_spread>
 	<heating_range_lower>-8.0</heating_range_lower>
 	<heating_range_upper>2.0</heating_range_upper>
 	<search_step_size>0.001</search_step_size>

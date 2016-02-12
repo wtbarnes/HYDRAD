@@ -19,16 +19,16 @@
 #include "../../Resources/source/constants.h"
 #include "../../Resources/source/xmlreader.h"
 
-void GetConfigurationParametersXML( PARAMETERS *pParams, char *config_filename)
+void GetConfigurationParametersXML( PARAMETERS *pParams, char *configFilename)
 {
 	//Parse XML configuration file
-	TiXmlDocument doc(config_filename);
+	TiXmlDocument doc(configFilename);
 	
 	//Check if loaded
 	bool loadOK = doc.LoadFile();
 	if(!loadOK)
 	{
-		printf("Failed to load XML configuration file %s.\n",config_filename);
+		printf("Failed to load XML configuration file %s.\n",configFilename);
 		//TODO: Exit or break out from here
 	}
 	
@@ -45,8 +45,8 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *config_filename)
 	pParams->s0 = atof(check_element(recursive_read(root,"foot_point_height"),"foot_point_height")->GetText());
 	pParams->T0 = atof(check_element(recursive_read(root,"foot_point_temperature"),"foot_point_temperature")->GetText());
 	pParams->n0 = atof(check_element(recursive_read(root,"foot_point_density"),"foot_point_density")->GetText());
-	pParams->sH0 = atof(check_element(recursive_read(root,"heating_location"),"heating_location")->GetText());
-	pParams->sH = atof(check_element(recursive_read(root,"heating_scale_height"),"heating_scale_height")->GetText());
+	pParams->sH0 = atof(check_element(recursive_read(root,"heating_loc"),"heating_loc")->GetText());
+	pParams->sH = atof(check_element(recursive_read(root,"heating_spread"),"heating_spread")->GetText());
 	pParams->Log_10H0[0] = atof(check_element(recursive_read(root,"heating_range_lower"),"heating_range_lower")->GetText());
     pParams->Log_10H0[1] = atof(check_element(recursive_read(root,"heating_range_upper"),"heating_range_upper")->GetText());
 	pParams->dLog_10H0 = atof(check_element(recursive_read(root,"search_step_size"),"search_step_size")->GetText()); 
@@ -71,37 +71,6 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *config_filename)
 
 }
 
-/*
-void GetConfigurationParameters( PARAMETERS *pParams )
-{
-FILE *pFile;
-
-pFile = fopen( "Initial_Conditions/config/initial_conditions.cfg", "r" );
-
-// Output path and filename
-fscanf( pFile, "%s", pParams->szOutputFilename );
-
-// Loop geometry
-ReadDouble( pFile, &(pParams->Lfull) );
-ReadDouble( pFile, &(pParams->Inc) );
-ReadDouble( pFile, &(pParams->s0) );
-
-// Lower boundary conditions
-ReadDouble( pFile, &(pParams->T0) );
-ReadDouble( pFile, &(pParams->n0) );
-
-// Solution parameter space
-// Heating
-ReadDouble( pFile, &(pParams->sH0) );
-ReadDouble( pFile, &(pParams->sH) );
-ReadDouble( pFile, &(pParams->Log_10H0[0]) );
-ReadDouble( pFile, &(pParams->Log_10H0[1]) );
-ReadDouble( pFile, &(pParams->dLog_10H0) );
-ReadDouble( pFile, &(pParams->Hintervals) );
-
-fclose( pFile );
-}
-*/
 
 void GenerateSemiCircularLoop( PARAMETERS Params )
 {
