@@ -42,7 +42,7 @@ class CAdaptiveMesh : private CEquations {
     public:
 
     // Constructor
-    CAdaptiveMesh( char *configFilename, char *rad_configFilename );
+    CAdaptiveMesh( char *configFilename, char *rad_configFilename, char *rad_config_eqFilename );
 	
     // Destructor
     ~CAdaptiveMesh( void );

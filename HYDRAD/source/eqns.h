@@ -24,7 +24,7 @@ class CEquations {
     int igdp;
     double lower_radiation_temperature_boundary;
 
-    void Initialise( char *configFilename, char *rad_configFilename );
+    void Initialise( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename );
     void FreeAll( void );
 
     // Function for finding the gravitational acceleration from the loop-up table
@@ -72,7 +72,7 @@ class CEquations {
     PCELL pActiveCell;
 
     // Constructor
-    CEquations( char *configFilename, char *rad_configFilename );
+    CEquations( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename );
 
     // Destructor
     ~CEquations( void );

@@ -20,6 +20,7 @@
 #include "../../Resources/source/constants.h"
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
+#include "../../Resources/source/xmlreader.h"
 
 
 double fLogLambda_ei( double Te, double Ti, double n )
@@ -57,7 +58,7 @@ return 23.0 - log( term1 );
 
 
 // Constructor
-CEquations::CEquations( char *configFilename, char *rad_configFilename )
+CEquations::CEquations( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename )
 {
 Initialise(configFilename, rad_configFilename);
 }
@@ -68,14 +69,36 @@ CEquations::~CEquations( void )
 FreeAll();
 }
 
-void CEquations::Initialise( char *configFilename, char *rad_configFilename )
+void CEquations::Initialise( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename )
 {
 FILE *pFile;
 double fTemp;
 int i, iTemp;
 
-//TODO: read in parameters from XML config file
-//TODO: add all bool parameters to Params structure
+//TODO:Read in HYDRAD configuration parameters from XML configuration file
+//Parse XML configuration file
+TiXmlDocument doc(configFilename);
+
+//Check if loaded
+bool loadOK = doc.LoadFile();
+if(!loadOK)
+{
+	printf("Failed to load XML configuration file %s.\n",configFilename);
+	//TODO: Exit or break out from here
+}
+
+//Get Document root
+TiXmlElement *root = doc.FirstChildElement();
+
+//Load in parameters
+//Filenames
+sprintf(Params.Profiles,"%s",check_element(recursive_read(root,"ic_profiles"),"ic_profiles")->GetText());
+sprintf(Params.GravityFilename,"%s",check_element(recursive_read(root,"tabulated_gravity_file"),"tabulated_gravity_file")->GetText());
+Params.Duration = atof(check_element(recursive_read(root,"duration"),"duration")->GetText());
+//Output options
+Params.OutputPeriod = atof(check_element(recursive_read(root,"file_output_period"),"file_output_period")->GetText());
+
+
 
 #ifdef USE_KINETIC_MODEL
 ppCellList = NULL;

@@ -20,7 +20,7 @@ int main( int argc, char **argv )
 	//TODO: add additional radiation configuration filename for eq, neq
 	//need to pass through mesh and eqns, cpp and h
 	
-	char configFilename[256],rad_configFilename[256];
+	char configFilename[256],rad_config_eqFilename[256],rad_config_neqFilename[256];
 	PMESH pMesh;
 
 	//Read command line options 
@@ -29,7 +29,8 @@ int main( int argc, char **argv )
 	description.add_options()
 		("help,h","The help message")
 		("config,c",po::value<std::string>()->required(),"HYDRAD configuration file.")
-		("rad_config,r",po::value<std::string>()->required(),"Radiation model configuration file.");
+		("rad_config_eq,r",po::value<std::string>()->required(),"Equilibrium radiation model configuration file.")
+		("rad_config_neq,r",po::value<std::string>()->required(),"Non-equilibrium radiation model configuration file.");
 	po::variables_map vm;
 	po::store(po::command_line_parser(argc,argv).options(description).run(),vm);
 	//Check if the help option is selected
@@ -42,10 +43,11 @@ int main( int argc, char **argv )
 	
 	//Copy command line options to variables (as needed)
 	std::strcpy(configFilename,vm["config"].as<std::string>().c_str());
-	std::strcpy(rad_configFilename,vm["rad_config"].as<std::string>().c_str());
+	std::strcpy(rad_config_eqFilename,vm["rad_config_eq"].as<std::string>().c_str());
+	std::strcpy(rad_config_neqFilename,vm["rad_config_neq"].as<std::string>().c_str());
 	
 	// Set up the problem, create the mesh and solve the equations
-	pMesh = new CAdaptiveMesh(configFilename, rad_configFilename);
+	pMesh = new CAdaptiveMesh(configFilename, rad_config_eqFilename, rad_config_neqFilename);
 	
 	// Delete the mesh
 	delete pMesh;

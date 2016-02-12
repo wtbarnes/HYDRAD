@@ -23,7 +23,7 @@
 // **** ADAPTIVE MESH CLASS ****
 
 // Constructor
-CAdaptiveMesh::CAdaptiveMesh( char *configFilename, char *rad_configFilename ) : CEquations( configFilename, rad_configFilename)
+CAdaptiveMesh::CAdaptiveMesh( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename ) : CEquations( configFilename, rad_config_eqFilename, rad_config_neqFilename)
 {
 // Create the initial mesh given the steady-state profiles
 CreateInitialMesh();
