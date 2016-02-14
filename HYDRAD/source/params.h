@@ -45,7 +45,10 @@ struct Parameters {
 	double safety_radiation, safety_conduction, safety_advection, safety_viscosity, time_step_increase_limit, relative_viscous_time_scale, minimum_radiation_temperature, zero_over_temperature_interval, minimum_temperature;
 	bool numerical_viscosity;
 	//Grid Options
+	int max_refinement_level;
+	double min_frac_diff, max_frac_diff;
 	bool adapt, refine_on_density, refine_on_electron_energy, refine_on_hydrogen_energy, linear_restriction, enforce_conservation;
+	
 
 };
 

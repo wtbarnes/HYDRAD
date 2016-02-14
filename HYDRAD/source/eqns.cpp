@@ -60,7 +60,7 @@ return 23.0 - log( term1 );
 // Constructor
 CEquations::CEquations( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename )
 {
-Initialise(configFilename, rad_configFilename);
+Initialise(configFilename, rad_config_eqFilename, rad_config_neqFilename);
 }
 
 // Destructor
@@ -124,7 +124,7 @@ Params.numerical_viscosity = string2bool(check_element(recursive_read(root,"nume
 //grid options
 Params.max_refinement_level = atoi(check_element(recursive_read(root,"max_refinement_level"),"max_refinement_level")->GetText());
 Params.min_frac_diff = atof(check_element(recursive_read(root,"min_frac_diff"),"min_frac_diff")->GetText());
-Params.max_frac_diff = atof(check_element(recursive_read(root,"max_frac_diff"),"max_frac_diff")->GetText(max
+Params.max_frac_diff = atof(check_element(recursive_read(root,"max_frac_diff"),"max_frac_diff")->GetText());
 Params.adapt = string2bool(check_element(recursive_read(root,"adapt"),"adapt")->GetText());
 Params.refine_on_density = string2bool(check_element(recursive_read(root,"refine_on_density"),"refine_on_density")->GetText());
 Params.refine_on_electron_energy = string2bool(check_element(recursive_read(root,"refine_on_electron_energy"),"refine_on_electron_energy")->GetText());
