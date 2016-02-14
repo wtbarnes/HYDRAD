@@ -19,11 +19,11 @@
 #include "heat.h"
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
+#include "../../Resources/source/xmlreader.h"
 
-
-CHeat::CHeat( char *szFilename, double fL )
+CHeat::CHeat( TiXmlElement *heating_node, double fL )
 {
-Initialise( szFilename, fL );
+Initialise( heating_node, fL );
 }
 
 CHeat::~CHeat( void )
@@ -31,13 +31,14 @@ CHeat::~CHeat( void )
 FreeAll();
 }
 
-void CHeat::Initialise( char *szFilename, double fL )
+void CHeat::Initialise( TiXmlElement *heating_node, double fL )
 {
 // Get the length of the loop
 fLoopLength = fL;
 
-GetHeatingData( szFilename );
-GetVALHeatingData();
+// GetHeatingData( szFilename );
+GetHeatingDataXml(heating_node);
+GetVALHeatingData(heating_node);
 }
 
 void CHeat::FreeAll( void )
@@ -65,74 +66,59 @@ free( tsDepisodic );
 free( teDepisodic );
 }
 
-void CHeat::GetHeatingData( char *szFilename )
-{
-FILE *pConfigFile;
-int i;
-
-// Open and read the configuration file
-pConfigFile = fopen( szFilename, "r" );
-
-// Get the duration of the heating simulation
-ReadDouble( pConfigFile, &fDuration );
-
-// Get the quiescent heating parameter values
-ReadDouble( pConfigFile, &s0quiescent );
-ReadDouble( pConfigFile, &sHquiescent );
-ReadDouble( pConfigFile, &E0quiescent );
-
-// Get the episodic heating event parameter values
-fscanf( pConfigFile, "%i", &NumActivatedEvents );
-
-if( !NumActivatedEvents )
-{
-    // Close the configuration file
-    fclose( pConfigFile );
-    return;
+void CHeat::GetHeatingDataXml(TiXmlElement *heating_node)
+{	
+	//Load static heating parameteters
+	fDuration = atof(check_element(recursive_read(heating_node,"duration"),"duration")->GetText());
+	s0quiescent = atof(check_element(recursive_read(heating_node,"bg_loc"),"bg_loc")->GetText());
+	sHquiescent = atof(check_element(recursive_read(heating_node,"bg_spread"),"bg_spread")->GetText());
+	E0quiescent = atof(check_element(recursive_read(heating_node,"bg_magnitude"),"bg_magnitude")->GetText());
+	NumActivatedEvents = atoi(check_element(recursive_read(heating_node,"num_events"),"num_events")->GetText());
+	
+	//Return if only bg heating selected
+	if(!NumActivatedEvents || NumActivatedEvents == 0)
+	{
+		return;
+	}
+	
+	// Allocate sufficient memory to store heating information for each event
+	// Location, scale-length and maximum energy
+	s0episodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	sHepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	E0episodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	// Start and end times of rise phase
+	tsRepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	teRepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	// Start and end times of decay phase
+	tsDepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	teDepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
+	
+	//Loop over event list
+	int i = 0;
+	TiXmlElement *eventList = check_element(recursive_read(heating_node,"events"),"events");
+	for(TiXmlElement *child = eventList->FirstChildElement(); child != NULL; child=child->NextSiblingElement())
+	{
+		s0episodic[i] = atoi(child->Attribute("loc"));
+		sHepisodic[i] = atoi(child->Attribute("spread"));
+		E0episodic[i] = atoi(child->Attribute("magnitude"));
+		tsRepisodic[i] = atoi(child->Attribute("rise_start"));
+		teRepisodic[i] = atoi(child->Attribute("rise_end"));
+		tsDepisodic[i] = atoi(child->Attribute("decay_start"));
+		teDepisodic[i] = atoi(child->Attribute("decay_end"));
+		i++;		
+	}
 }
 
-// Allocate sufficient memory to store the positioning and timing information for each event
-
-// Location, scale-length and maximum energy
-s0episodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-sHepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-E0episodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-
-// Start and end times of rise phase
-tsRepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-teRepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-
-// Start and end times of decay phase
-tsDepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-teDepisodic = (double*)malloc( sizeof(double) * NumActivatedEvents );
-
-for( i=0; i<NumActivatedEvents; i++ )
+void CHeat::GetVALHeatingData( TiXmlElement *heating_node )
 {
-    // Location, scale-length and maximum energy
-    ReadDouble( pConfigFile, &(s0episodic[i]) );
-    ReadDouble( pConfigFile, &(sHepisodic[i]) );
-    ReadDouble( pConfigFile, &(E0episodic[i]) );
-
-    // Start and end times of rise phase
-    ReadDouble( pConfigFile, &(tsRepisodic[i]) );
-    ReadDouble( pConfigFile, &(teRepisodic[i]) );
-
-    // Start and end times of decay phase
-    ReadDouble( pConfigFile, &(tsDepisodic[i]) );
-    ReadDouble( pConfigFile, &(teDepisodic[i]) );
-}
-
-// Close the configuration file
-fclose( pConfigFile );
-}
-
-void CHeat::GetVALHeatingData( void )
-{
+char ValHeatingFile[512];
 FILE *pFile;
 int i;
 
+//Get filename
+sprintf(ValHeatingFile,"%s",check_element(recursive_read(heating_node,"val_heating_file"),"val_heating_file")->GetText());
 // Open and read the configuration file
-pFile = fopen( "Radiation_Model/atomic_data/OpticallyThick/VAL_atmospheres/VAL.heat", "r" );
+pFile = fopen( ValHeatingFile, "r" );
 
 // Get the number of data points in the file
 fscanf( pFile, "%i", &iVALHeatingDP );

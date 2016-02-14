@@ -10,6 +10,7 @@
 // *
 // ****
 
+#include "tinyxml.h"
 
 class CHeat {
 
@@ -43,15 +44,16 @@ class CHeat {
     int iVALHeatingDP;
     double **ppVALHeating;
 
-    void Initialise( char *szFilename, double fL );
+    void Initialise( TiXmlElement *heating_node, double fL );
     void FreeAll( void );
 
     void GetHeatingData ( char *szFilename );
-    void GetVALHeatingData( void );
+    void GetHeatingDataXml ( TiXmlElement *heating_node );
+    void GetVALHeatingData( TiXmlElement *heating_node );
 
     public:
 
-    CHeat( char *szFilename, double fL );
+    CHeat( TiXmlElement *heating_node, double fL );
     ~CHeat( void );
 
     double CalculateQuiescentHeating( double s );
