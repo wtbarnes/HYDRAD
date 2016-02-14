@@ -8,7 +8,6 @@
 // *
 // ****
 
-
 #include "radiation.h"
 
 

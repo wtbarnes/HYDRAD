@@ -75,8 +75,6 @@ FILE *pFile;
 double fTemp;
 int i, iTemp;
 
-//TODO:Read in HYDRAD configuration parameters from XML configuration file
-//Parse XML configuration file
 TiXmlDocument doc(configFilename);
 
 //Check if loaded
