@@ -44,13 +44,15 @@
 	<enforce_conservation>True</enforce_conservation>
 	<!-- heating -->
 	<heating>
-		<duration></duration>
-		<bg_loc></bg_loc>
-		<bg_spread></bg_spread>
-		<bg_magnitude></bg_magnitude>
-		<num_events></num_events>
+		<val_heating_file>/Users/willbarnes/Documents/Rice/Research/apolloDB/OpticallyThick/VAL_atmospheres/VAL.heat</val_heating_file>
+		<duration>10.0</duration>
+		<bg_loc>3.0E+9</bg_loc>
+		<bg_spread>1.0E+9</bg_spread>
+		<bg_magnitude>1.0E-3</bg_magnitude>
+		<num_events>2</num_events>
 		<events>
-			<event loc="" spread="" magnitude="" rise_start="" rise_end="" decay_start="" decay_end="" />
+			<event loc="3.0E+9" spread="1.0E+9" magnitude="1.0E-3" rise_start="0.0" rise_end="2.5" decay_start="2.5" decay_end="5" />
+			<event loc="3.0E+9" spread="1.0E+9" magnitude="1.0E-3" rise_start="10." rise_end="12.5" decay_start="12.5" decay_end="15.0" />
 		</events>
 	</heating>
 </root>

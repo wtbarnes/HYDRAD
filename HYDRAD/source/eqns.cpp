@@ -132,7 +132,6 @@ Params.refine_on_hydrogen_energy = string2bool(check_element(recursive_read(root
 Params.linear_restriction = string2bool(check_element(recursive_read(root,"linear_restriction"),"linear_restriction")->GetText());
 Params.enforce_conservation = string2bool(check_element(recursive_read(root,"enforce_conservation"),"enforce_conservation")->GetText());
 
-
 // Get the loop length from the profiles file
 pFile = fopen( Params.Profiles, "r" );
 ReadDouble( pFile, &fTemp );
@@ -152,15 +151,16 @@ for( i=0; i<igdp; i++ )
 }
 fclose( pFile );
 
-#ifdef USE_KINETIC_MODEL
-ppCellList = NULL;
-// Get the tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
-Get_SH_Table();
-#endif // USE_KINETIC_MODEL
+if(Params.use_kinetic_model)
+{
+	ppCellList = NULL;
+	// Get the tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
+	Get_SH_Table();
+}
 
 // Create the heating object and set the lower radiation temperature boundary
-//TODO: feed heating node of xml input to heating class
-pHeat = new CHeat( (char *)"Heating_Model/config/heating_model.cfg", Params.L );
+TiXmlElement *heating_config = check_element(recursive_read(root,"heating"),"heating");
+pHeat = new CHeat( heating_config, Params.L );
 
 //TODO:expose root atomic db file string
 // Create the radiation objects
@@ -1267,7 +1267,6 @@ for( j=0; j<SPECIES; j++ )
 // *                                                                            *
 // ******************************************************************************
 
-#ifdef USE_KINETIC_MODEL
 // Index labels for each column of the table in Spitzer & Harm, 1953, Phys. Rev., 89, 977
 #define U							0		// Relative (to u_th) velocity values in column 0
 #define X_E							1		// Coefficients when an electric field is present in column 1
@@ -1643,4 +1642,3 @@ for( iIndex=2; iIndex<iNumCells-2; iIndex++ )
     pActiveCell->UpdateCellProperties( &CellProperties );
 }
 }
-#endif // USE_KINETIC_MODEL
