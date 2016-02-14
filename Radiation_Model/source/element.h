@@ -8,6 +8,9 @@
 // *
 // ****
 
+#ifndef ELEMENT_H
+#define ELEMENT_H
+
 #include "tinyxml.h"
 
 class CElement {
@@ -117,3 +120,5 @@ class CElement {
 
 typedef CElement* PELEMENT;
 typedef CElement** PPELEMENT;
+
+#endif

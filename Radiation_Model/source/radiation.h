@@ -8,6 +8,8 @@
 // *
 // ****
 
+#ifndef RADIATION_H
+#define RADIATION_H
 
 #include "element.h"
 
@@ -100,3 +102,5 @@ class CRadiation {
 };
 
 typedef CRadiation* PRADIATION;
+
+#endif
