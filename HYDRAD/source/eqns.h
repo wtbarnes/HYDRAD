@@ -33,14 +33,12 @@ class CEquations {
     // Function for finding the smallest time-scale
     void GetSmallestTimeScale( double *delta_t, int iFirstStep );
 
-#ifdef USE_KINETIC_MODEL
     int iNumCells;
 
     // Functions for the Spitzer-Harm part of the solution
     // Tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
     double SH_Table[51][3];
     void Get_SH_Table( void );
-#endif // USE_KINETIC_MODEL
 
     public:
 
@@ -53,14 +51,12 @@ class CEquations {
     // Pointers to the radiation models
     PRADIATION pRadiation, pRadiation2;
 
-#ifdef OPTICALLY_THICK_RADIATION
     // Pointers to the ions for which optically-thick radiative emission
     // will be calculated
     POPTICALLYTHICKION pHI, pMgII, pCaII;
 
     // Pointer to the centre of the row at the current time (approx. the loop apex)
     PCELL pCentreOfCurrentRow;
-#endif // OPTICALLY_THICK_RADIATION
 
     // Pointer to the left-most cell at the previous time (the start of the previous row)
     PCELL pStartOfPreviousRow;
@@ -88,7 +84,6 @@ class CEquations {
     void Half_Time_Step( PCELLPROPERTIES pNewCellProperties, double delta_t );
     void Full_Time_Step( PCELLPROPERTIES CellProperties, double delta_t );
 
-#ifdef USE_KINETIC_MODEL
     // Pointer to an indexed list of cells
     PCELL *ppCellList;
 
@@ -97,6 +92,5 @@ class CEquations {
 
     void CalculateKineticModel( int iFirstStep );
     void CalculateNonMaxDFN( void );
-#endif // USE_KINETIC_MODEL
 
 };

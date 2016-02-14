@@ -56,23 +56,17 @@ struct AdaptiveMeshCellProperties {
     // Numerical viscosity
     double Fnumerical[3];
 
-#ifdef NON_EQUILIBRIUM_RADIATION
     // Fractional population of the ions in the current cell
     PIONFRAC pIonFrac;
 	
     // The smallest ionisation / recombination time-scale in the current cell
     double atomic_delta_t;
-#endif // NON_EQUILIBRIUM_RADIATION
 
-#ifdef OPTICALLY_THICK_RADIATION
     // The column number and mass densities
     double HI_c, rho_c;
-#endif // OPTICALLY_THICK_RADIATION
 
-#ifdef USE_KINETIC_MODEL
     // Kinetic model: contains Maxwellian and non-Maxwellian distributions; and functions to calculate moments
     PKINETIC pKinetic;
-#endif // USE_KINETIC_MODEL
 
     // Terms of the equations
 	
