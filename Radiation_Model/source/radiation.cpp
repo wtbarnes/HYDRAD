@@ -61,6 +61,9 @@ void CRadiation::Initialise(char *szFilename)
 	NumElements = atoi(check_element(recursive_read(root,"numElements"),"numElements")->GetText());
 	max_optically_thin_density = atof(check_element(recursive_read(root,"max_optically_thin_density"),"max_optically_thin_density")->GetText());
 	
+	//Set DB filename for use outside of radiation class
+	sprintf(atomicDBFilename,"%s",szAtomicDBFilename);
+	
 	//Allocate memory for array of element objects
 	ppElements = (PPELEMENT)malloc( sizeof( CElement ) * NumElements ); // Allocate sufficient memory to hold the pointers to each element object
 	pZ = (int*)malloc( sizeof(int) * NumElements ); // Allocate sufficient memory to hold the list of atomic numbers

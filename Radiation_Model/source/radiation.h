@@ -98,6 +98,9 @@ class CRadiation {
     // Functions to calculate energy radiated based upon power-laws
     double GetPowerLawRad( double flog_10T, double flog_10n );
     double GetFreeFreeRad( double flog_10T, double flog_10n );
+	
+	// Atomic database filename
+	char atomicDBFilename[512];
 
 };
 

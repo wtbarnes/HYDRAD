@@ -72,6 +72,7 @@ FreeAll();
 void CEquations::Initialise( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename )
 {
 FILE *pFile;
+char opticallyThickAbundanceFile[256];
 double fTemp;
 int i, iTemp;
 
@@ -162,18 +163,27 @@ if(Params.use_kinetic_model)
 TiXmlElement *heating_config = check_element(recursive_read(root,"heating"),"heating");
 pHeat = new CHeat( heating_config, Params.L );
 
-//TODO:expose root atomic db file string
 // Create the radiation objects
 pRadiation = new CRadiation(rad_config_neqFilename);
 pRadiation2 = new CRadiation(rad_config_eqFilename);
-lower_radiation_temperature_boundary = MINIMUM_RADIATION_TEMPERATURE + ZERO_OVER_TEMPERATURE_INTERVAL;
+lower_radiation_temperature_boundary = Params.minimum_radiation_temperature + Params.zero_over_temperature_interval;
 
-#ifdef OPTICALLY_THICK_RADIATION
-// Create the optically-thick ion objects
-pHI = new COpticallyThickIon( 1, (char *)"h_1", (char *)"Radiation_Model/atomic_data/abundances/asplund.ab" );
-pMgII = new COpticallyThickIon( 12, (char *)"mg_2", (char *)"Radiation_Model/atomic_data/abundances/asplund.ab" );
-pCaII = new COpticallyThickIon( 20, (char *)"ca_2", (char *)"Radiation_Model/atomic_data/abundances/asplund.ab" );
-#endif // OPTICALLY_THICK_RADIATION
+if(Params.optically_thick_radiation)
+{
+	//DEBUG
+	printf("About to read OT params.\n");
+	// Create the optically-thick ion objects
+	//TODO:This section needs some work, generalize optically thick read-in
+	sprintf(opticallyThickAbundanceFile,"%sabundances/asplund.ab",pRadiation->atomicDBFilename);
+	printf("DB filename is %s\n.",opticallyThickAbundanceFile);
+	//TODO: cleanup import of filenames in optically thick ion class
+	pHI = new COpticallyThickIon( 1, (char *)"h_1", opticallyThickAbundanceFile );
+	pMgII = new COpticallyThickIon( 12, (char *)"mg_2", opticallyThickAbundanceFile );
+	pCaII = new COpticallyThickIon( 20, (char *)"ca_2", opticallyThickAbundanceFile );
+}
+
+//DEBUG
+printf("Read in optically thick parameters.\n");
 
 //Free document tree
 doc.Clear();

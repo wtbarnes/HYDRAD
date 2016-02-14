@@ -17,7 +17,7 @@
 	<use_power_law_radiative_losses>False</use_power_law_radiative_losses>
 	<decouple_ionisation_state_solver>False</decouple_ionisation_state_solver>
 	<density_dependent_rates>False</density_dependent_rates>
-	<optically_thick_radiation>False</optically_thick_radiation>
+	<optically_thick_radiation>True</optically_thick_radiation>
 	<use_kinetic_model>False</use_kinetic_model>
 	<minimum_collisional_coupling_timescale>0.01</minimum_collisional_coupling_timescale>
 	<force_single_fluid>False</force_single_fluid>
