@@ -11,7 +11,6 @@
 // ****
 
 #define AMU 1.660538782E-24                     // [g]
-#define AMU_FILENAME "Radiation_Model/atomic_data/masses/masses.amu"
 
 #define OPTICALLY_THICK_TEMPERATURE 2.4E4       // [K]
 
@@ -43,11 +42,11 @@ class COpticallyThickIon {
     double **ppkappa_0;
 
     // Functions to initialise the class and free allocated memory
-    void Initialise( int iZ, char *szIon, char *szAbundFilename );
+    void Initialise( int iZ, char *szIon, char *atomicDBFilename );
     void FreeAll( void );
 
     // Functions to open and read the ion data files
-    void GetAbundData( char *szAbundFilename );
+    void GetAbundData( char *szAbundFilename, char *szAmuFilename );
     void GetIonFracData( char *szIonFracFilename );
     void GetEmissData( char *szEmissFilename );
     void GetEscProbData( char *szEscProbFilename );
@@ -61,7 +60,7 @@ class COpticallyThickIon {
     public:
 
     // Constructor
-    COpticallyThickIon( int iZ, char *szIon, char *szAbundFilename );
+    COpticallyThickIon( int iZ, char *szIon, char *atomicDBFilename );
 	
     // Destructor
     ~COpticallyThickIon( void );

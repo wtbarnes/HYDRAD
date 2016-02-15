@@ -19,9 +19,9 @@
 #include "../../../Resources/source/file.h"
 #include "../../../Resources/source/fitpoly.h"
 
-COpticallyThickIon::COpticallyThickIon( int iZ, char *szIon, char *szAbundFilename )
+COpticallyThickIon::COpticallyThickIon( int iZ, char *szIon, char *atomicDBFilename )
 {
-Initialise( iZ, szIon, szAbundFilename );
+Initialise( iZ, szIon, atomicDBFilename );
 }
 
 COpticallyThickIon::~COpticallyThickIon( void )
@@ -29,21 +29,23 @@ COpticallyThickIon::~COpticallyThickIon( void )
 FreeAll();
 }
 
-void COpticallyThickIon::Initialise( int iZ, char *szIon, char *szAbundFilename )
+void COpticallyThickIon::Initialise( int iZ, char *szIon, char *atomicDBFilename )
 {
-char szEmissFilename[256], szEscProbFilename[256], szIonFracFilename[256], szkappa_0Filename[256];
+char szAmuFilename[256], szAbundFilename[256], szEmissFilename[256], szEscProbFilename[256], szIonFracFilename[256], szkappa_0Filename[256];
 
 // Set the atomic number of the element
 Z = iZ;
 
 // Construct the filenames of the ion data files
-sprintf( szIonFracFilename, "Radiation_Model/atomic_data/OpticallyThick/balances/%s.bal", szIon );
-sprintf( szEmissFilename, "Radiation_Model/atomic_data/OpticallyThick/emissivities/%s.em", szIon );
-sprintf( szEscProbFilename, "Radiation_Model/atomic_data/OpticallyThick/escape_probabilities/%s.esc", szIon );
-sprintf( szkappa_0Filename, "Radiation_Model/atomic_data/OpticallyThick/thermal_conductivities/%s.tc", szIon );
+sprintf( szAmuFilename, "%smasses/masses.amu", atomicDBFilename);
+sprintf( szAbundFilename, "%sabundances/asplund.ab", atomicDBFilename);
+sprintf( szIonFracFilename, "%sOpticallyThick/balances/%s.bal", atomicDBFilename, szIon );
+sprintf( szEmissFilename, "%sOpticallyThick/emissivities/%s.em", atomicDBFilename, szIon );
+sprintf( szEscProbFilename, "%sOpticallyThick/escape_probabilities/%s.esc", atomicDBFilename, szIon );
+sprintf( szkappa_0Filename, "%sOpticallyThick/thermal_conductivities/%s.tc", atomicDBFilename, szIon );
 
 // Get the ion data
-GetAbundData( szAbundFilename );
+GetAbundData( szAbundFilename, szAmuFilename );
 GetIonFracData( szIonFracFilename );
 GetEmissData( szEmissFilename );
 GetEscProbData( szEscProbFilename );
@@ -82,7 +84,7 @@ for( i=0; i<2; i++ )
 free( ppIonFrac );
 }
 
-void COpticallyThickIon::GetAbundData( char *szAbundFilename )
+void COpticallyThickIon::GetAbundData( char *szAbundFilename, char *szAmuFilename )
 {
 FILE *pFile;
 double fAb[128], fm_g[128], fAbH, fSumAbund;
@@ -133,7 +135,7 @@ for( i=0; i<iNumElements; i++ )
     fAb[i] /= fSumAbund;
 
 // Open the atomic mass units file
-pFile = fopen( AMU_FILENAME, "r" );
+pFile = fopen( szAmuFilename, "r" );
 
 // Get the number of masses stored in the file
 fscanf( pFile, "%i", &iNumMasses );
