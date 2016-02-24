@@ -72,7 +72,6 @@ FreeAll();
 void CEquations::Initialise( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename )
 {
 FILE *pFile;
-char opticallyThickAbundanceFile[256];
 double fTemp;
 int i, iTemp;
 
@@ -170,20 +169,11 @@ lower_radiation_temperature_boundary = Params.minimum_radiation_temperature + Pa
 
 if(Params.optically_thick_radiation)
 {
-	//DEBUG
-	printf("About to read OT params.\n");
 	// Create the optically-thick ion objects
-	//TODO:This section needs some work, generalize optically thick read-in
-	sprintf(opticallyThickAbundanceFile,"%sabundances/asplund.ab",pRadiation->atomicDBFilename);
-	printf("DB filename is %s\n.",opticallyThickAbundanceFile);
-	//TODO: cleanup import of filenames in optically thick ion class
-	pHI = new COpticallyThickIon( 1, (char *)"h_1", opticallyThickAbundanceFile );
-	pMgII = new COpticallyThickIon( 12, (char *)"mg_2", opticallyThickAbundanceFile );
-	pCaII = new COpticallyThickIon( 20, (char *)"ca_2", opticallyThickAbundanceFile );
+	pHI = new COpticallyThickIon( 1, (char *)"h_1", pRadiation->atomicDBFilename );
+	pMgII = new COpticallyThickIon( 12, (char *)"mg_2", pRadiation->atomicDBFilename );
+	pCaII = new COpticallyThickIon( 20, (char *)"ca_2", pRadiation->atomicDBFilename );
 }
-
-//DEBUG
-printf("Read in optically thick parameters.\n");
 
 //Free document tree
 doc.Clear();
@@ -194,9 +184,10 @@ void CEquations::FreeAll( void )
 {
 int i;
 
-#ifdef USE_KINETIC_MODEL
-free( ppCellList );
-#endif // USE_KINETIC_MODEL
+if(Params.use_kinetic_model)
+{
+	free( ppCellList );
+}
 
 // Free the memory allocated to the gravity look-up table
 for( i=0; i<igdp; i++ )
@@ -210,12 +201,13 @@ delete pHeat;
 delete pRadiation;
 delete pRadiation2;
 
-#ifdef OPTICALLY_THICK_RADIATION
-// Delete the optically-thick ion objects
-delete pHI;
-delete pMgII;
-delete pCaII;
-#endif // OPTICALLY_THICK_RADIATION
+if(Params.optically_thick_radiation)
+{
+	// Delete the optically-thick ion objects
+	delete pHI;
+	delete pMgII;
+	delete pCaII;
+}
 }
 
 void CEquations::CalculatePhysicalQuantities( void )
@@ -232,9 +224,10 @@ Kappa[HYDROGEN] = SPITZER_ION_CONDUCTIVITY;
 double term1, term2;
 int j;
 
-#ifdef OPTICALLY_THICK_RADIATION
-double fHI;
-#endif // OPTICALLY_THICK_RADIATION
+if(Params.optically_thick_radiation)
+{
+	double fHI;
+}
 
 pNextActiveCell = pStartOfCurrentRow;
 
@@ -243,11 +236,12 @@ while( pNextActiveCell )
     pActiveCell = pNextActiveCell;
     pActiveCell->GetCellProperties( &CellProperties );
 
-#ifdef OPTICALLY_THICK_RADIATION
-    // Locate the apex cell from which the column densities will be calculated along each leg
-    if( CellProperties.s[1] <= Params.L / 2.0 )
-        pCentreOfCurrentRow = pActiveCell;
-#endif // OPTICALLY_THICK_RADIATION
+	if(Params.optically_thick_radiation)
+    {
+	    // Locate the apex cell from which the column densities will be calculated along each leg
+	    if( CellProperties.s[1] <= Params.L / 2.0 )
+	        pCentreOfCurrentRow = pActiveCell;
+    }
 
 // ******************************************************************************
 // *                                                                            *
@@ -264,31 +258,34 @@ while( pNextActiveCell )
     // GAMMA_MINUS_ONE / BOLTZMANN_CONSTANT = 4.830917874e15
     CellProperties.T[HYDROGEN] = (4.830917874e15) * AVERAGE_PARTICLE_MASS * ( term1 - term2 );
 
-#ifdef OPTICALLY_THICK_RADIATION
-    if( CellProperties.T[HYDROGEN] < OPTICALLY_THICK_TEMPERATURE )
+	if(Params.optically_thick_radiation)
     {
-        // 1.44e-4 provides some negligible number of electrons to avoid division by zero errors
-        fHI = pHI->GetIonFrac( log10(CellProperties.T[HYDROGEN]) );
-        // 1.000144 = 1.0 + 1.44e-4
-        CellProperties.n[ELECTRON] = ( 1.000144 - fHI ) * CellProperties.n[HYDROGEN];
+	    if( CellProperties.T[HYDROGEN] < OPTICALLY_THICK_TEMPERATURE )
+	    {
+	        // 1.44e-4 provides some negligible number of electrons to avoid division by zero errors
+	        fHI = pHI->GetIonFrac( log10(CellProperties.T[HYDROGEN]) );
+	        // 1.000144 = 1.0 + 1.44e-4
+	        CellProperties.n[ELECTRON] = ( 1.000144 - fHI ) * CellProperties.n[HYDROGEN];
+	    }
+	    else
+	    {
+	        // 1.000144 = 1.0 + 1.44e-4
+	        CellProperties.n[ELECTRON] = 1.000144 * CellProperties.n[HYDROGEN];
+	    }
     }
-    else
+	else
     {
-        // 1.000144 = 1.0 + 1.44e-4
-        CellProperties.n[ELECTRON] = 1.000144 * CellProperties.n[HYDROGEN];
-    }
-#else // OPTICALLY_THICK_RADIATION
-    CellProperties.n[ELECTRON] = CellProperties.n[HYDROGEN];
-#endif // OPTICALLY_THICK_RADIATION
+		CellProperties.n[ELECTRON] = CellProperties.n[HYDROGEN];
+	}
     // GAMMA_MINUS_ONE / BOLTZMANN_CONSTANT = 4.830917874e15
     CellProperties.T[ELECTRON] = ( (4.830917874e15) * CellProperties.TE_KE[1][ELECTRON] ) / CellProperties.n[ELECTRON] ;
 
     // Temperature limiter
     for( j=0; j<SPECIES; j++ )
     {
-        if( CellProperties.T[j] < MINIMUM_TEMPERATURE )
-	{
-            CellProperties.T[j] = MINIMUM_TEMPERATURE;
+        if( CellProperties.T[j] < Params.minimum_temperature )
+		{
+            CellProperties.T[j] = Params.minimum_temperature;
             // BOLTZMANN_CONSTANT / GAMMA_MINUS_ONE = 2.07e-16
             CellProperties.TE_KE[1][j] = (2.07e-16) * CellProperties.n[j] * CellProperties.T[j];
 
@@ -300,7 +297,7 @@ while( pNextActiveCell )
     for( j=0; j<SPECIES; j++ )
     {
         CellProperties.P[1][j] = BOLTZMANN_CONSTANT * CellProperties.n[j] * CellProperties.T[j];
-	CellProperties.TE_KE_P[1][j] = CellProperties.TE_KE[1][j] + CellProperties.P[1][j];
+		CellProperties.TE_KE_P[1][j] = CellProperties.TE_KE[1][j] + CellProperties.P[1][j];
     }
 
     term1 = ( GAMMA * ( CellProperties.P[1][ELECTRON] + CellProperties.P[1][HYDROGEN] ) ) / CellProperties.rho[1];
@@ -317,14 +314,17 @@ while( pNextActiveCell )
 // *    COLLISIONS                                                              *
 // ******************************************************************************
 
-#ifdef FORCE_SINGLE_FLUID
-    CellProperties.nu_ie = 1.0 / MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
-#else // FORCE_SINGLE_FLUID
-    // Calculate the collision frequency between the electrons and ions
-    // 4.820055089755540 * ELECTRON_MASS = 4.391070186767300e-27
-    // For derivation of 4.820055089755540 refer to research diary entry: Monday 6th February 2007 (p26)
-    CellProperties.nu_ie = ( ( (4.391070186767300e-27) / AVERAGE_PARTICLE_MASS ) * CellProperties.n[ELECTRON] * fLogLambda_ei( CellProperties.T[ELECTRON], CellProperties.T[HYDROGEN], CellProperties.n[ELECTRON] ) ) / pow( CellProperties.T[ELECTRON], 1.5 );
-#endif // FORCE_SINGLE_FLUID
+	if(Params.force_single_fluid)
+    {
+    	CellProperties.nu_ie = 1.0 / Params.minimum_collisional_coupling_time_scale;
+    }
+	else
+    {
+	    // Calculate the collision frequency between the electrons and ions
+	    // 4.820055089755540 * ELECTRON_MASS = 4.391070186767300e-27
+	    // For derivation of 4.820055089755540 refer to research diary entry: Monday 6th February 2007 (p26)
+	    CellProperties.nu_ie = ( ( (4.391070186767300e-27) / AVERAGE_PARTICLE_MASS ) * CellProperties.n[ELECTRON] * fLogLambda_ei( CellProperties.T[ELECTRON], CellProperties.T[HYDROGEN], CellProperties.n[ELECTRON] ) ) / pow( CellProperties.T[ELECTRON], 1.5 );
+    }
     // Calculated in EvaluateTerms when the collisional term is known
     CellProperties.collision_delta_t = Params.Duration;
 
@@ -333,7 +333,7 @@ while( pNextActiveCell )
 // ******************************************************************************
 
     // The time-step is calculated by the CFL condition
-    CellProperties.advection_delta_t = SAFETY_ADVECTION * ( CellProperties.cell_width / ( fabs( CellProperties.v[1] ) + CellProperties.Cs ) );
+    CellProperties.advection_delta_t = Params.safety_advection * ( CellProperties.cell_width / ( fabs( CellProperties.v[1] ) + CellProperties.Cs ) );
 
 // ******************************************************************************
 // *    THERMAL CONDUCTION                                                      *
@@ -341,22 +341,30 @@ while( pNextActiveCell )
 
     // The time-step is calculated by: delta_t = ( n * k_B ) * ( cell width )^2 / ( 2.0 * coefficient of thermal conduction )
     // 0.5 * BOLTZMANN_CONSTANT = 6.9e-17
-    term1 = SAFETY_CONDUCTION * (6.9e-17) * CellProperties.cell_width * CellProperties.cell_width;
-
-#ifdef USE_KINETIC_MODEL
-    CellProperties.conduction_delta_t[ELECTRON] = Params.Duration;
-    for( j=1; j<SPECIES; j++ )
-#else // USE_KINETIC_MODEL
-    for( j=0; j<SPECIES; j++ )
-#endif // USE_KINETIC_MODEL
+    term1 = Params.safety_conduction * (6.9e-17) * CellProperties.cell_width * CellProperties.cell_width;
+	int start_index;
+	
+	if(Params.use_kinetic_model)
     {
-#ifdef OPTICALLY_THICK_RADIATION
-        if( j == HYDROGEN && CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
-            CellProperties.conduction_delta_t[j] = ( term1 * CellProperties.n[j] ) / ( ( Kappa[j] + pHI->Getkappa_0( log10(CellProperties.T[ELECTRON]) ) ) * pow( CellProperties.T[j], 2.5 ) );
-        else
-#endif // OPTICALLY_THICK_RADIATION
-            CellProperties.conduction_delta_t[j] = ( term1 * CellProperties.n[j] ) / ( Kappa[j] * pow( CellProperties.T[j], 2.5 ) );
+	    CellProperties.conduction_delta_t[ELECTRON] = Params.Duration;
+	    start_index = 1;
     }
+	else
+    {
+    	start_index = 0;
+    }
+	
+	for( j=start_index; j<SPECIES; j++ )
+	{
+		if(Params.optically_thick_radiation && j == HYDROGEN && CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE)
+	    {
+	        CellProperties.conduction_delta_t[j] = ( term1 * CellProperties.n[j] ) / ( ( Kappa[j] + pHI->Getkappa_0( log10(CellProperties.T[ELECTRON]) ) ) * pow( CellProperties.T[j], 2.5 ) );
+	    }
+		else
+       	{
+	       	CellProperties.conduction_delta_t[j] = ( term1 * CellProperties.n[j] ) / ( Kappa[j] * pow( CellProperties.T[j], 2.5 ) );
+       	}
+	}
 
 // ******************************************************************************
 // *    RADIATION                                                               *
@@ -371,7 +379,7 @@ while( pNextActiveCell )
 
     // The time-step is calculated by: delta_t = ( rho ) * ( cell width )^2 / ( 2.0 * (4/3) * coefficient of dynamic viscosity )
     CellProperties.eta = DYNAMIC_VISCOSITY * ( pow( CellProperties.T[HYDROGEN], 2.5 ) / fLogLambda_ii( CellProperties.T[HYDROGEN], CellProperties.n[HYDROGEN] ) );
-    CellProperties.viscosity_delta_t = SAFETY_VISCOSITY * ( ( CellProperties.rho[1] * CellProperties.cell_width * CellProperties.cell_width ) / ( 2.6666666666666666666666666666667 * CellProperties.eta ) );
+    CellProperties.viscosity_delta_t = Params.safety_viscosity * ( ( CellProperties.rho[1] * CellProperties.cell_width * CellProperties.cell_width ) / ( 2.6666666666666666666666666666667 * CellProperties.eta ) );
 
     pActiveCell->UpdateCellProperties( &CellProperties );
 
@@ -384,26 +392,29 @@ void CEquations::EvaluateTerms( double current_time, double *delta_t, int iFirst
 PCELL pNextActiveCell, pFarLeftCell, pLeftCell, pRightCell;
 CELLPROPERTIES CellProperties, FarLeftCellProperties, LeftCellProperties, RightCellProperties;
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-PCELL pFarRightCell;
-CELLPROPERTIES FarRightCellProperties;
+if(Params.non_equilibrium_radiation)
+{
+	PCELL pFarRightCell;
+	CELLPROPERTIES FarRightCellProperties;
 
-// Variables used for time-dependent ionisation balance calculation
-double **ppni0, **ppni1, **ppni2, **ppni3, **ppni4, ps[5], **ppdnibydt;
-#endif // NON_EQUILIBRIUM_RADIATION
+	// Variables used for time-dependent ionisation balance calculation
+	double **ppni0, **ppni1, **ppni2, **ppni3, **ppni4, ps[5], **ppdnibydt;
+}
 
-#ifdef OPTICALLY_THICK_RADIATION
-double fHI_c, frho_c, cell_width_cos_theta;
-#endif // OPTICALLY_THICK_RADIATION
+if(Params.optically_thick_radiation)
+{
+	double fHI_c, frho_c, cell_width_cos_theta;
+}
 
 // Variables used by advective flux transport algorithm
 double Q1, Q2, Q3, QT;
 
 // Variables used by thermal and viscous flux transport algorithms
 double T[3][SPECIES], Kappa[SPECIES], max_flux_coeff[SPECIES], Fc_max, v[2], n, P;
-#ifdef NUMERICAL_VISCOSITY
-double rho_v[2];
-#endif // NUMERICAL_VISCOSITY
+if(Params.numerical_viscosity)
+{
+	double rho_v[2];	
+}
 
 Kappa[ELECTRON] = SPITZER_ELECTRON_CONDUCTIVITY;
 Kappa[HYDROGEN] = SPITZER_ION_CONDUCTIVITY;
@@ -418,9 +429,10 @@ double x[5], y[5], UpperValue, LowerValue, error;
 double term1, term2;
 int j;
 
-#ifdef USE_KINETIC_MODEL
-CalculateKineticModel( iFirstStep );
-#endif // USE_KINETIC_MODEL
+if(Params.use_kinetic_model)
+{
+	CalculateKineticModel( iFirstStep );
+}
 
 // ******************************************************************************
 // *                                                                            *
@@ -494,7 +506,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 		
 // CALCULATE THE MOMENTUM
 
-        x[1] = FarLeftCellProperties.s[1];
+    x[1] = FarLeftCellProperties.s[1];
 	x[2] = LeftCellProperties.s[1];
 	y[1] = FarLeftCellProperties.rho_v[1];
 	y[2] = LeftCellProperties.rho_v[1];
@@ -569,7 +581,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
     {
 // CALCULATE THE DENSITY
 	        
-        x[1] = CellProperties.s[1];
+    x[1] = CellProperties.s[1];
 	x[2] = RightCellProperties.s[1];
 	y[1] = CellProperties.rho[1];
 	y[2] = RightCellProperties.rho[1];
@@ -639,7 +651,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 
 // CALCULATE THE ENERGY
 		
-        for( j=0; j<SPECIES; j++ )
+    for( j=0; j<SPECIES; j++ )
 	{
             x[1] = CellProperties.s[1];
             x[2] = RightCellProperties.s[1];
@@ -688,22 +700,26 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
     // Only need to calculate the diffusive terms on the first time-step
     if( iFirstStep )
     {
-#ifdef USE_KINETIC_MODEL
-	j = ELECTRON;
+	if(Params.use_kinetic_model)
+	{
+		j = ELECTRON;
 
-	y[1] = FarLeftCellProperties.Fc[1][j];
-	y[2] = LeftCellProperties.Fc[1][j];
-	y[3] = CellProperties.Fc[1][j];
-	y[4] = RightCellProperties.Fc[1][j];
+		y[1] = FarLeftCellProperties.Fc[1][j];
+		y[2] = LeftCellProperties.Fc[1][j];
+		y[3] = CellProperties.Fc[1][j];
+		y[4] = RightCellProperties.Fc[1][j];
+			
+		FitPolynomial4( x, y, CellProperties.s[0], &(CellProperties.Fc[0][j]), &error );
+		LeftCellProperties.Fc[2][j] = CellProperties.Fc[0][j];
 		
-	FitPolynomial4( x, y, CellProperties.s[0], &(CellProperties.Fc[0][j]), &error );
-	LeftCellProperties.Fc[2][j] = CellProperties.Fc[0][j];
-
-	for( j=1; j<SPECIES; j++ )
-#else // USE_KINETIC_MODEL
+		start_index = 1;
+	}
+	else // USE_KINETIC_MODEL
+	{
+		start_index = 0;
+	}
 	// Calculate the conducted heat fluxes for the different species
-	for( j=0; j<SPECIES; j++ )
-#endif // USE_KINETIC_MODEL
+	for( j=start_index; j<SPECIES; j++ )
 	{
             y[1] = FarLeftCellProperties.T[j];
             y[2] = LeftCellProperties.T[j];
@@ -715,12 +731,12 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
             T[2][j] = CellProperties.T[j];
 
             // Calculate the conducted heat flux at the left boundary
-#ifdef OPTICALLY_THICK_RADIATION
-            if( j == HYDROGEN && T[1][ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
+            if( Params.optically_thick_radiation && j == HYDROGEN && T[1][ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
                 CellProperties.Fc[0][j] = - ( Kappa[j] + pHI->Getkappa_0( log10(T[1][ELECTRON]) ) ) * pow( T[1][j], 2.5 ) * ( ( T[2][j] - T[0][j] ) / CellProperties.cell_width );
             else
-#endif // OPTICALLY_THICK_RADIATION
+            {
                 CellProperties.Fc[0][j] = - Kappa[j] * pow( T[1][j], 2.5 ) * ( ( T[2][j] - T[0][j] ) / CellProperties.cell_width );
+            }
 
             // Estimate the maximum conducted heat flux (treats n as approximately constant across cell)
             // BOLTZMANN_CONSTANT^1.5 = 1.621132937e-24
@@ -740,14 +756,15 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 // *    VISCOUS FLUX TRANSPORT ALGORITHM                                        *
 // ******************************************************************************
 
-#ifdef USE_KINETIC_MODEL
-	j = ELECTRON;
-	y[1] = FarLeftCellProperties.T[j];
-	y[2] = LeftCellProperties.T[j];
-	y[3] = CellProperties.T[j];
-	y[4] = RightCellProperties.T[j];
-	FitPolynomial4( x, y, CellProperties.s[0], &(T[1][j]), &error );
-#endif // USE_KINETIC_MODEL
+	if(Parmas.use_kinetic_model)
+	{
+		j = ELECTRON;
+		y[1] = FarLeftCellProperties.T[j];
+		y[2] = LeftCellProperties.T[j];
+		y[3] = CellProperties.T[j];
+		y[4] = RightCellProperties.T[j];
+		FitPolynomial4( x, y, CellProperties.s[0], &(T[1][j]), &error );
+	}
 
 	j = HYDROGEN;
 	y[1] = FarLeftCellProperties.n[j];
@@ -787,19 +804,20 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 // *    NUMERICAL VISCOSITY                                                     *
 // ******************************************************************************
 
-#ifdef NUMERICAL_VISCOSITY
-	y[1] = FarLeftCellProperties.rho_v[1];
-	y[2] = LeftCellProperties.rho_v[1];
-	y[3] = CellProperties.rho_v[1];
-	y[4] = RightCellProperties.rho_v[1];
-	FitPolynomial4( x, y, ( CellProperties.s[1] - CellProperties.cell_width ), &(rho_v[0]), &error );
-	rho_v[1] = CellProperties.rho_v[1];
+	if(Params.numerical_viscosity)
+	{
+		y[1] = FarLeftCellProperties.rho_v[1];
+		y[2] = LeftCellProperties.rho_v[1];
+		y[3] = CellProperties.rho_v[1];
+		y[4] = RightCellProperties.rho_v[1];
+		FitPolynomial4( x, y, ( CellProperties.s[1] - CellProperties.cell_width ), &(rho_v[0]), &error );
+		rho_v[1] = CellProperties.rho_v[1];
 
-	term1 = ( CellProperties.cell_width * CellProperties.cell_width ) / ( 2.0 * RELATIVE_VISCOUS_TIME_SCALE * ( CellProperties.advection_delta_t / SAFETY_ADVECTION ) );
-	CellProperties.Fnumerical[0] = term1 * ( ( rho_v[1] - rho_v[0] ) / CellProperties.cell_width );
+		term1 = ( CellProperties.cell_width * CellProperties.cell_width ) / ( 2.0 * Params.relative_viscous_time_scale * ( CellProperties.advection_delta_t / Params.safety_advection ) );
+		CellProperties.Fnumerical[0] = term1 * ( ( rho_v[1] - rho_v[0] ) / CellProperties.cell_width );
 
-        LeftCellProperties.Fnumerical[2] = CellProperties.Fnumerical[0];
-#endif // NUMERICAL_VISCOSITY
+	        LeftCellProperties.Fnumerical[2] = CellProperties.Fnumerical[0];
+	}
     }
 
 // ******************************************************************************
@@ -808,12 +826,12 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 
     for( j=0; j<SPECIES; j++ )
     {
-	y[1] = FarLeftCellProperties.P[1][j];
-	y[2] = LeftCellProperties.P[1][j];
-	y[3] = CellProperties.P[1][j];
-	y[4] = RightCellProperties.P[1][j];
-        FitPolynomial4( x, y, CellProperties.s[0], &(CellProperties.P[0][j]), &error );
-	LeftCellProperties.P[2][j] = CellProperties.P[0][j];
+		y[1] = FarLeftCellProperties.P[1][j];
+		y[2] = LeftCellProperties.P[1][j];
+		y[3] = CellProperties.P[1][j];
+		y[4] = RightCellProperties.P[1][j];
+    	FitPolynomial4( x, y, CellProperties.s[0], &(CellProperties.P[0][j]), &error );
+		LeftCellProperties.P[2][j] = CellProperties.P[0][j];
     }
 
     pActiveCell->UpdateCellProperties( &CellProperties );
@@ -832,57 +850,58 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 // *    COLUMN NUMBER AND MASS DENSITIES                                        *
 // ******************************************************************************
 
-#ifdef OPTICALLY_THICK_RADIATION
-// Left-hand leg of the loop
-fHI_c = 0.0;
-frho_c = 0.0;
-pNextActiveCell = pCentreOfCurrentRow;
-while( pNextActiveCell )
+if(Params.optically_thick_radiation)
 {
-    pActiveCell = pNextActiveCell;
-    pActiveCell->GetCellProperties( &CellProperties );
+	// Left-hand leg of the loop
+	fHI_c = 0.0;
+	frho_c = 0.0;
+	pNextActiveCell = pCentreOfCurrentRow;
+	while( pNextActiveCell )
+	{
+	    pActiveCell = pNextActiveCell;
+	    pActiveCell->GetCellProperties( &CellProperties );
 
-    if( CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
-    {
-        cell_width_cos_theta = CellProperties.cell_width * fabs( cos( ( _PI_ * CellProperties.s[1] ) / Params.L ) );
-        // Calculate the neutral hydrogen column number density
-        fHI_c += ( CellProperties.n[HYDROGEN] - ( CellProperties.n[ELECTRON] / 1.000144 ) ) * cell_width_cos_theta;
-        // Calculate the mass column density
-        frho_c += CellProperties.rho[1] * cell_width_cos_theta;
+	    if( CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
+	    {
+	        cell_width_cos_theta = CellProperties.cell_width * fabs( cos( ( _PI_ * CellProperties.s[1] ) / Params.L ) );
+	        // Calculate the neutral hydrogen column number density
+	        fHI_c += ( CellProperties.n[HYDROGEN] - ( CellProperties.n[ELECTRON] / 1.000144 ) ) * cell_width_cos_theta;
+	        // Calculate the mass column density
+	        frho_c += CellProperties.rho[1] * cell_width_cos_theta;
 
-        CellProperties.HI_c = fHI_c;
-        CellProperties.rho_c = frho_c;
+	        CellProperties.HI_c = fHI_c;
+	        CellProperties.rho_c = frho_c;
 
-        pActiveCell->UpdateCellProperties( &CellProperties );
-    }
-    pNextActiveCell = pActiveCell->pGetPointer( LEFT );
+	        pActiveCell->UpdateCellProperties( &CellProperties );
+	    }
+	    pNextActiveCell = pActiveCell->pGetPointer( LEFT );
+	}
+
+	// Right-hand leg of the loop
+	fHI_c = 0.0;
+	frho_c = 0.0;
+	pNextActiveCell = pCentreOfCurrentRow;
+	while( pNextActiveCell )
+	{
+	    pActiveCell = pNextActiveCell;
+	    pActiveCell->GetCellProperties( &CellProperties );
+
+	    if( CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
+	    {
+	        cell_width_cos_theta = CellProperties.cell_width * fabs( cos( ( _PI_ * CellProperties.s[1] ) / Params.L ) );
+	        // Calculate the neutral hydrogen column number density
+	        fHI_c += ( CellProperties.n[HYDROGEN] - ( CellProperties.n[ELECTRON] / 1.000144 ) ) * cell_width_cos_theta;
+	        // Calculate the mass column density
+	        frho_c += CellProperties.rho[1] * cell_width_cos_theta;
+
+	        CellProperties.HI_c = fHI_c;
+	        CellProperties.rho_c = frho_c;
+
+	        pActiveCell->UpdateCellProperties( &CellProperties );
+	    }
+	    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	}
 }
-
-// Right-hand leg of the loop
-fHI_c = 0.0;
-frho_c = 0.0;
-pNextActiveCell = pCentreOfCurrentRow;
-while( pNextActiveCell )
-{
-    pActiveCell = pNextActiveCell;
-    pActiveCell->GetCellProperties( &CellProperties );
-
-    if( CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
-    {
-        cell_width_cos_theta = CellProperties.cell_width * fabs( cos( ( _PI_ * CellProperties.s[1] ) / Params.L ) );
-        // Calculate the neutral hydrogen column number density
-        fHI_c += ( CellProperties.n[HYDROGEN] - ( CellProperties.n[ELECTRON] / 1.000144 ) ) * cell_width_cos_theta;
-        // Calculate the mass column density
-        frho_c += CellProperties.rho[1] * cell_width_cos_theta;
-
-        CellProperties.HI_c = fHI_c;
-        CellProperties.rho_c = frho_c;
-
-        pActiveCell->UpdateCellProperties( &CellProperties );
-    }
-    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
-}
-#endif // OPTICALLY_THICK_RADIATION
 
 // ******************************************************************************
 // *    TERMS OF THE CONVERSATION EQUATIONS                                     *
@@ -901,13 +920,14 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
     pRightCell = pActiveCell->pGetPointer( RIGHT );
     pRightCell->GetCellProperties( &RightCellProperties );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    pFarLeftCell = pLeftCell->pGetPointer( LEFT );
-    pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
+	if(Params.non_equilibrium_radiation)
+    {
+	    pFarLeftCell = pLeftCell->pGetPointer( LEFT );
+	    pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
 
-    pFarRightCell = pRightCell->pGetPointer( RIGHT );
-    pFarRightCell->GetCellProperties( &FarRightCellProperties );
-#endif // NON_EQUILIBRIUM_RADIATION
+	    pFarRightCell = pRightCell->pGetPointer( RIGHT );
+	    pFarRightCell->GetCellProperties( &FarRightCellProperties );
+    }
 
 // ******************************************************************************
 // *                                                                            *
@@ -960,16 +980,17 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
 // *    VISCOUS STRESS                                                          *
 // ******************************************************************************
 
-	CellProperties.rho_v_term[3] = ( CellProperties.Feta[2] - CellProperties.Feta[0] ) / CellProperties.cell_width;
+		CellProperties.rho_v_term[3] = ( CellProperties.Feta[2] - CellProperties.Feta[0] ) / CellProperties.cell_width;
 
 // ******************************************************************************
 // *    NUMERICAL VISCOSITY                                                     *
 // ******************************************************************************
 
-#ifdef NUMERICAL_VISCOSITY
-	// Numerical viscosity is used to stabilise the solutions as in the Lax scheme
-	CellProperties.rho_v_term[4] = ( CellProperties.Fnumerical[2] - CellProperties.Fnumerical[0] ) / CellProperties.cell_width;
-#endif // NUMERICAL_VISCOSITY
+		if(Params.numerical_viscosity)
+		{
+			// Numerical viscosity is used to stabilise the solutions as in the Lax scheme
+			CellProperties.rho_v_term[4] = ( CellProperties.Fnumerical[2] - CellProperties.Fnumerical[0] ) / CellProperties.cell_width;
+		}
     }
 
     CellProperties.drho_vbydt = CellProperties.rho_v_term[0] + CellProperties.rho_v_term[1] + CellProperties.rho_v_term[2] + CellProperties.rho_v_term[3] + CellProperties.rho_v_term[4];
@@ -986,9 +1007,9 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
 
     for( j=0; j<SPECIES; j++ )
     {
-	LowerValue = CellProperties.TE_KE_P[0][j] * CellProperties.v[0];
-	UpperValue = CellProperties.TE_KE_P[2][j] * CellProperties.v[2];
-	CellProperties.TE_KE_term[0][j] = - ( UpperValue - LowerValue ) / CellProperties.cell_width;
+		LowerValue = CellProperties.TE_KE_P[0][j] * CellProperties.v[0];
+		UpperValue = CellProperties.TE_KE_P[2][j] * CellProperties.v[2];
+		CellProperties.TE_KE_term[0][j] = - ( UpperValue - LowerValue ) / CellProperties.cell_width;
     }
 
     // Terms that must be integrated to first order in time only, otherwise they're unconditionally unstable
@@ -1012,10 +1033,11 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
 // *    NUMERICAL VISCOSITY                                                     *
 // ******************************************************************************
 
-#ifdef NUMERICAL_VISCOSITY
-	// Numerical viscosity is used to stabilise the solutions as in the Lax scheme
-	CellProperties.TE_KE_term[8][HYDROGEN] = CellProperties.rho_v_term[4] * CellProperties.v[1];
-#endif // NUMERICAL_VISCOSITY
+	if(Params.numerical_viscosity)
+	{
+		// Numerical viscosity is used to stabilise the solutions as in the Lax scheme
+		CellProperties.TE_KE_term[8][HYDROGEN] = CellProperties.rho_v_term[4] * CellProperties.v[1];
+	}
     }
 
 // ******************************************************************************
@@ -1033,8 +1055,8 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
     // Set the collisional timescale to 1% of the timescale for order of magnitude changes in the electron energy due to collisional energy exchange
     CellProperties.collision_delta_t = ( 0.01 * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[3][ELECTRON] );
     // If the collisional timescale is less than the minimum specified collisional timescale then scale the rate of energy exchange so that tiny timesteps can be avoided
-    if( CellProperties.collision_delta_t < MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE )
-        CellProperties.TE_KE_term[3][ELECTRON] *= CellProperties.collision_delta_t / MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
+    if( CellProperties.collision_delta_t < Params.minimum_collisional_coupling_time_scale )
+        CellProperties.TE_KE_term[3][ELECTRON] *= CellProperties.collision_delta_t / Params.minimum_collisional_coupling_time_scale;
 
     CellProperties.TE_KE_term[3][HYDROGEN] = - CellProperties.TE_KE_term[3][ELECTRON];
 
@@ -1042,72 +1064,96 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
 // *    HEATING                                                                 *
 // ******************************************************************************
 
-    CellProperties.TE_KE_term[4][HEATED_SPECIES] = pHeat->CalculateHeating( CellProperties.s[1], current_time );
+    CellProperties.TE_KE_term[4][Params.heated_species] = pHeat->CalculateHeating( CellProperties.s[1], current_time );
    
 // ******************************************************************************
 // *    RADIATION                                                               *
 // ******************************************************************************
 
 CellProperties.TE_KE_term[5][ELECTRON] = - SMALLEST_DOUBLE;
-#ifdef OPTICALLY_THICK_RADIATION
-    if( CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE )
-    {
-        CellProperties.TE_KE_term[4][HEATED_SPECIES] += pHeat->CalculateVALHeating( log10( CellProperties.rho_c ) );
-        CellProperties.TE_KE_term[5][ELECTRON] -= pHI->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10((4e-14)*CellProperties.HI_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
-        CellProperties.TE_KE_term[5][ELECTRON] -= pMgII->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10(CellProperties.rho_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
-        CellProperties.TE_KE_term[5][ELECTRON] -= pCaII->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10(CellProperties.rho_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
-        CellProperties.radiation_delta_t = ( SAFETY_RADIATION * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[5][ELECTRON] )
-;
+
+double Tcheck;
+if(Params.optically_thick_radiation)
+{
+	Tcheck = OPTICALLY_THICK_TEMPERATURE;
+}
+else
+{
+	Tcheck = Params.minimum_radiation_temperature;
+}
+
+if( CellProperties.T[ELECTRON] < Tcheck)
+{
+    if(Params.optically_thick_radiation)
+	{
+	    CellProperties.TE_KE_term[4][Params.heated_species] += pHeat->CalculateVALHeating( log10( CellProperties.rho_c ) );
+	    CellProperties.TE_KE_term[5][ELECTRON] -= pHI->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10((4e-14)*CellProperties.HI_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
+	    CellProperties.TE_KE_term[5][ELECTRON] -= pMgII->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10(CellProperties.rho_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
+	    CellProperties.TE_KE_term[5][ELECTRON] -= pCaII->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10(CellProperties.rho_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
+	    CellProperties.radiation_delta_t = ( Params.safety_radiation * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[5][ELECTRON] )
     }
-    else
-    {
-	term1 = 1.0;
-#else // OPTICALLY_THICK_RADIATION
-    if( CellProperties.T[ELECTRON] < MINIMUM_RADIATION_TEMPERATURE )
-    {
+	else
+	{
         // Provide some additional heating to the chromosphere if the temperature drops below the specified isothermal temperature
-        CellProperties.TE_KE_term[5][ELECTRON] = ( ( ( MINIMUM_RADIATION_TEMPERATURE / CellProperties.T[ELECTRON] ) - 1.0 ) * CellProperties.TE_KE[1][ELECTRON] ) / MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
-	CellProperties.radiation_delta_t = MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
+        CellProperties.TE_KE_term[5][ELECTRON] = ( ( ( Params.minimum_radiation_temperature / CellProperties.T[ELECTRON] ) - 1.0 ) * CellProperties.TE_KE[1][ELECTRON] ) / MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
+		CellProperties.radiation_delta_t = MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
     }
-    else
-    {   
+}
+else
+{
 	term1 = 1.0;
 	// Decrease the radiation smoothly to zero in the chromosphere
-	if( CellProperties.T[ELECTRON] < lower_radiation_temperature_boundary )
-	    term1 = ( CellProperties.T[ELECTRON] - MINIMUM_RADIATION_TEMPERATURE ) / ZERO_OVER_TEMPERATURE_INTERVAL;
-#endif // OPTICALLY_THICK_RADIATION
-
-#ifdef DECOUPLE_IONISATION_STATE_SOLVER
-	#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-		printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; USE_POWER_LAW_RADIATIVE_LOSSES\n" );
-		CellProperties.TE_KE_term[5][ELECTRON] -= term1 * pRadiation2->GetPowerLawRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) );
-	#else // USE_POWER_LAW_RADIATIVE_LOSSES
-		#ifdef NON_EQUILIBRIUM_RADIATION
-			printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; NON_EQUILIBRIUM_RADIATION\n" );
-			CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
-		#else // NON_EQUILIBRIUM_RADIATION
-			printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; nNON_EQUILIBRIUM_RADIATION\n" );
-			CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
-		#endif // NON_EQUILIBRIUM_RADIATION
-	#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-#else // DECOUPLE_IONISATION_STATE_SOLVER
-	#ifdef NON_EQUILIBRIUM_RADIATION
-		printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; NON_EQUILIBRIUM_RADIATION\n" );
-        	ppni2 = CellProperties.pIonFrac->ppGetIonFrac();
-	        CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ), ppni2 ) + pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
-	#else // NON_EQUILIBRIUM_RADIATION
-		#ifdef USE_POWER_LAW_RADIATIVE_LOSSES
-			// printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; nNON_EQUILIBRIUM_RADIATION; USE_POWER_LAW_RADIATIVE_LOSSES\n" );
-			CellProperties.TE_KE_term[5][ELECTRON] -= term1 * pRadiation2->GetPowerLawRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) );
-		#else // USE_POWER_LAW_RADIATIVE_LOSSES
-			// printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; nNON_EQUILIBRIUM_RADIATION; nUSE_POWER_LAW_RADIATIVE_LOSSES\n" );
-        		CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
-		#endif // USE_POWER_LAW_RADIATIVE_LOSSES
-	#endif // NON_EQUILIBRIUM_RADIATION
-#endif // DECOUPLE_IONISATION_STATE_SOLVER
-	    CellProperties.radiation_delta_t = ( SAFETY_RADIATION * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[5][ELECTRON] )
-;
+	if( CellProperties.T[ELECTRON] < lower_radiation_temperature_boundary && Params.optically_thick_radiation==false)
+    {
+	    term1 = ( CellProperties.T[ELECTRON] - Params.minimum_radiation_temperature ) / Params.zero_over_temperature_interval;
     }
+	
+if(Params.decouple_ionisation_state_solver)
+{
+		if(Params.use_power_law_radiative_losses)
+		{
+			printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; USE_POWER_LAW_RADIATIVE_LOSSES\n" );
+			CellProperties.TE_KE_term[5][ELECTRON] -= term1 * pRadiation2->GetPowerLawRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) );
+		}
+		else // USE_POWER_LAW_RADIATIVE_LOSSES
+		{
+			if(Params.non_equilibrium_radiation)
+			{
+				printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; NON_EQUILIBRIUM_RADIATION\n" );
+				CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
+			}
+			else // NON_EQUILIBRIUM_RADIATION
+			{
+				printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; nNON_EQUILIBRIUM_RADIATION\n" );
+				CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
+			}
+		}
+}
+else // DECOUPLE_IONISATION_STATE_SOLVER
+{
+		if(Params.non_equilibrium_radiation)
+		{
+				printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; NON_EQUILIBRIUM_RADIATION\n" );
+		        	ppni2 = CellProperties.pIonFrac->ppGetIonFrac();
+			        CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ), ppni2 ) + pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
+		}
+		else // NON_EQUILIBRIUM_RADIATION
+		{
+				if(Params.use_power_law_radiative_losses)
+				{
+						// printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; nNON_EQUILIBRIUM_RADIATION; USE_POWER_LAW_RADIATIVE_LOSSES\n" );
+						CellProperties.TE_KE_term[5][ELECTRON] -= term1 * pRadiation2->GetPowerLawRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) );
+				}
+				else // USE_POWER_LAW_RADIATIVE_LOSSES
+				{
+						// printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; nNON_EQUILIBRIUM_RADIATION; nUSE_POWER_LAW_RADIATIVE_LOSSES\n" );
+			        		CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
+				}
+		}
+}
+	    CellProperties.radiation_delta_t = ( Params.safety_radiation * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[5][ELECTRON] );
+}
+
 
 // ******************************************************************************
 // *    SMALL-SCALE ELECTRIC FIELDS                                             *
@@ -1128,22 +1174,23 @@ CellProperties.TE_KE_term[5][ELECTRON] = - SMALLEST_DOUBLE;
 // *                                                                            *
 // ******************************************************************************
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    ppni0 = FarLeftCellProperties.pIonFrac->ppGetIonFrac();
-    ppni1 = LeftCellProperties.pIonFrac->ppGetIonFrac();
+if(Params.non_equilibrium_radiation)
+{
+	ppni0 = FarLeftCellProperties.pIonFrac->ppGetIonFrac();
+	ppni1 = LeftCellProperties.pIonFrac->ppGetIonFrac();
     ppni2 = CellProperties.pIonFrac->ppGetIonFrac();
-    ppni3 = RightCellProperties.pIonFrac->ppGetIonFrac();
-    ppni4 = FarRightCellProperties.pIonFrac->ppGetIonFrac();
+	ppni3 = RightCellProperties.pIonFrac->ppGetIonFrac();
+	ppni4 = FarRightCellProperties.pIonFrac->ppGetIonFrac();
 
-    ps[0] = FarLeftCellProperties.s[1];
-    ps[1] = LeftCellProperties.s[1];
-    ps[2] = CellProperties.s[1];
-    ps[3] = RightCellProperties.s[1];
-    ps[4] = FarRightCellProperties.s[1];
+	ps[0] = FarLeftCellProperties.s[1];
+	ps[1] = LeftCellProperties.s[1];
+	ps[2] = CellProperties.s[1];
+	ps[3] = RightCellProperties.s[1];
+	ps[4] = FarRightCellProperties.s[1];
 
-    ppdnibydt = CellProperties.pIonFrac->ppGetdnibydt();
-    pRadiation->GetAlldnibydt( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ), ppni0, ppni1, ppni2, ppni3, ppni4, ps, CellProperties.s, CellProperties.v, CellProperties.cell_width, ppdnibydt, &(CellProperties.atomic_delta_t) );
-#endif // NON_EQUILIBRIUM_RADIATION
+	ppdnibydt = CellProperties.pIonFrac->ppGetdnibydt();
+	pRadiation->GetAlldnibydt( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ), ppni0, ppni1, ppni2, ppni3, ppni4, ps, CellProperties.s, CellProperties.v, CellProperties.cell_width, ppdnibydt, &(CellProperties.atomic_delta_t) );
+}
 
     pActiveCell->UpdateCellProperties( &CellProperties );
 
@@ -1220,11 +1267,12 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
     if( CellProperties.radiation_delta_t < *delta_t )
 	*delta_t = CellProperties.radiation_delta_t;
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    // Ionisation and recombination timescale
-    if( CellProperties.atomic_delta_t < *delta_t )
-        *delta_t = CellProperties.atomic_delta_t;
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation)
+{
+	// Ionisation and recombination timescale
+	if( CellProperties.atomic_delta_t < *delta_t )
+		*delta_t = CellProperties.atomic_delta_t;
+}
 
     pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 }
@@ -1237,10 +1285,11 @@ int j;
 
 pActiveCell->GetCellProperties( &CellProperties );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-// Integrate the ion fractions
-pNewCellProperties->pIonFrac->IntegrateAllIonFrac( delta_t );
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation)
+{
+	// Integrate the ion fractions
+	pNewCellProperties->pIonFrac->IntegrateAllIonFrac( delta_t );
+}
 
 pNewCellProperties->rho[1] = CellProperties.rho[1] + ( delta_t * CellProperties.drhobydt );
 pNewCellProperties->rho_v[1] = CellProperties.rho_v[1] + ( delta_t * CellProperties.drho_vbydt );
@@ -1258,11 +1307,12 @@ int j;
 pBottomCell = pActiveCell->pGetPointer( BOTTOM );
 pBottomCell->GetCellProperties( &BottomCellProperties );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-// Integrate the ion fractions using the previous set of values
-pCellProperties->pIonFrac->CopyAllIonFrac( BottomCellProperties.pIonFrac );
-pCellProperties->pIonFrac->IntegrateAllIonFrac( delta_t );
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation)
+{
+	// Integrate the ion fractions using the previous set of values
+	pCellProperties->pIonFrac->CopyAllIonFrac( BottomCellProperties.pIonFrac );
+	pCellProperties->pIonFrac->IntegrateAllIonFrac( delta_t );
+}
 
 pCellProperties->rho[1] = BottomCellProperties.rho[1] + ( delta_t * pCellProperties->drhobydt );
 pCellProperties->rho_v[1] = BottomCellProperties.rho_v[1] + ( delta_t * pCellProperties->drho_vbydt );
@@ -1646,7 +1696,7 @@ for( iIndex=2; iIndex<iNumCells-2; iIndex++ )
 
     // The time-step is calculated by: delta_t = ( n * k_B ) * ( cell width )^2 / ( 2.0 * coefficient of thermal conduction )
     // 0.5 * BOLTZMANN_CONSTANT = 6.9e-17
-    term1 = SAFETY_CONDUCTION * (6.9e-17) * CellProperties.cell_width * CellProperties.cell_width;
+    term1 = Params.safety_conduction * (6.9e-17) * CellProperties.cell_width * CellProperties.cell_width;
     CellProperties.conduction_delta_t[ELECTRON] = ( term1 * CellProperties.n[ELECTRON] ) / Kappa;
 
     pActiveCell->UpdateCellProperties( &CellProperties );
