@@ -53,12 +53,13 @@ int iNumberOfCells, i, j;
 
 printf( "\nProcessing the initial conditions...\n" );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-PCELL pNextActiveCell;
-FILE *pIonFile = NULL;
-char szIonFilename[32];
-double fTemp;
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation)
+{
+	PCELL pNextActiveCell;
+	FILE *pIonFile = NULL;
+	char szIonFilename[32];
+	double fTemp;
+}
 
 // ******************************************************************************
 // *                                                                            *
@@ -104,14 +105,16 @@ for( i = 0; i < iNumberOfCells; i++ )
     for( j=1; j<=MAX_REFINEMENT_LEVEL; j++ )
 	fscanf( pFile, "%i", &(CellProperties.iUniqueID[j]) );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    // Reset the pointer to the ion population fractions object
-    CellProperties.pIonFrac = NULL;
-#endif // NON_EQUILIBRIUM_RADIATION
+	if(Params.non_equilibrium_radiation)
+	{
+	    // Reset the pointer to the ion population fractions object
+	    CellProperties.pIonFrac = NULL;
+	}
 
-#ifdef USE_KINETIC_MODEL
-    CellProperties.pKinetic = new CKinetic();
-#endif // USE_KINETIC_MODEL
+	if(Params.use_kinetic_model)
+	{
+    	CellProperties.pKinetic = new CKinetic();
+	}
 
     // Create a new cell
     pActiveCell = new CAdaptiveMeshCell( &CellProperties );
@@ -123,20 +126,20 @@ for( i = 0; i < iNumberOfCells; i++ )
     if( !i )
     {
         // Need to know the address of the left-most cell at each time t
-	// in order to derive the row of cells at t + delta_t
-	pStartOfCurrentRow = pActiveCell;
-	pStartOfPreviousRow = NULL;		
+		// in order to derive the row of cells at t + delta_t
+		pStartOfCurrentRow = pActiveCell;
+		pStartOfPreviousRow = NULL;		
 
-	// Set the LEFT pointer of the left-most cell to NULL
-	pActiveCell->SetPointer( LEFT, NULL );
+		// Set the LEFT pointer of the left-most cell to NULL
+		pActiveCell->SetPointer( LEFT, NULL );
     }
     // If this is not the left-most cell set the RIGHT pointer of the previous cell
     // to point at the new cell and the LEFT pointer of the new cell to point at
     // the previous cell
     else
     {
-	pPreviousCell->SetPointer( RIGHT, pActiveCell );
-	pActiveCell->SetPointer( LEFT, pPreviousCell );
+		pPreviousCell->SetPointer( RIGHT, pActiveCell );
+		pActiveCell->SetPointer( LEFT, pPreviousCell );
     }
 	
     // Keep track of the cell pointer so that the appropriate LEFT and RIGHT pointers can be set
@@ -150,10 +153,13 @@ fclose( pFile );
 // *    ADAPT THE INITIAL MESH                                                  *
 // ******************************************************************************
 
-#ifdef ADAPT
-if( mesh_time == 0.0 )
-    Adapt();
-#endif // ADAPT
+if(Params.adapt)
+{
+	if( mesh_time == 0.0 )
+    {
+	    Adapt();
+    }
+}
 
 CalculatePhysicalQuantities();
 
@@ -161,50 +167,61 @@ CalculatePhysicalQuantities();
 // *    INITIALISE THE IONISATION STATE                                         *
 // ******************************************************************************
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-// If the mesh time is greater than 0.0 then the nonequilibrium ion population corresponding to
-// the current time should be used
-if( mesh_time > 0.0 )
+if(Params.non_equilibrium_radiation)
 {
-    sprintf( szIonFilename, "Results/profile%i.ine", iFileNumber );
-    pIonFile = fopen( szIonFilename, "r" );
-}
+	// If the mesh time is greater than 0.0 then the nonequilibrium ion population corresponding to
+	// the current time should be used
+	if( mesh_time > 0.0 )
+	{
+	    //TODO: need to read in the output filename, adjust here but bigger problem: get this to the place where the file is actually printed!
+		sprintf( szIonFilename, "Results/profile%i.ine", iFileNumber );
+	    pIonFile = fopen( szIonFilename, "r" );
+	}
 
-pNextActiveCell = pStartOfCurrentRow;
+	pNextActiveCell = pStartOfCurrentRow;
 
-while( pNextActiveCell )
-{
-    pActiveCell = pNextActiveCell;
-    pActiveCell->GetCellProperties( &CellProperties );
+	while( pNextActiveCell )
+	{
+	    pActiveCell = pNextActiveCell;
+	    pActiveCell->GetCellProperties( &CellProperties );
 
-    // Initialise the fractional populations of the ions
-    CellProperties.pIonFrac = new CIonFrac( NULL, (char *)"Radiation_Model/config/elements_neq.cfg", pRadiation );
+	    // Initialise the fractional populations of the ions
+		//TODO: somehow get the non-eq configuration filename to here
+		//TODO: other problems with CIonFrac class
+	    CellProperties.pIonFrac = new CIonFrac( NULL, (char *)"Radiation_Model/config/elements_neq.cfg", pRadiation );
 
-    // If the mesh time is greater than 0.0 then get the nonequilibrium ion population corresponding to
-    // the current time and position
-    if( mesh_time > 0.0 )
+	    // If the mesh time is greater than 0.0 then get the nonequilibrium ion population corresponding to
+	    // the current time and position
+	    if( mesh_time > 0.0 )
+	    {
+	        ReadDouble( pIonFile, &fTemp );
+	        CellProperties.pIonFrac->ReadAllIonFracFromFile( pIonFile );
+	    }
+	    else
+	    {
+			// Make sure the ionisation balance EXACTLY matches equilibrium at t = 0 seconds
+			if(Params.density_dependent_rates)
+			{
+				CellProperties.pIonFrac->ResetAllIonFrac( log10(CellProperties.T[ELECTRON]), log10(CellProperties.n[ELECTRON]) );
+			
+			}	
+			else 
+			{
+				// DENSITY_DEPENDENT_RATES
+				CellProperties.pIonFrac->ResetAllIonFrac( log10(CellProperties.T[ELECTRON]) );
+			}
+	    }
+
+	    pActiveCell->UpdateCellProperties( &CellProperties );
+
+	    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	}
+
+	if( mesh_time > 0.0 )
     {
-        ReadDouble( pIonFile, &fTemp );
-        CellProperties.pIonFrac->ReadAllIonFracFromFile( pIonFile );
+	    fclose( pIonFile );
     }
-    else
-    {
-	// Make sure the ionisation balance EXACTLY matches equilibrium at t = 0 seconds
-#ifdef DENSITY_DEPENDENT_RATES
-	CellProperties.pIonFrac->ResetAllIonFrac( log10(CellProperties.T[ELECTRON]), log10(CellProperties.n[ELECTRON]) );
-#else // DENSITY_DEPENDENT_RATES
-	CellProperties.pIonFrac->ResetAllIonFrac( log10(CellProperties.T[ELECTRON]) );
-#endif // DENSITY_DEPENDENT_RATES
-    }
-
-    pActiveCell->UpdateCellProperties( &CellProperties );
-
-    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 }
-
-if( mesh_time > 0.0 )
-    fclose( pIonFile );
-#endif // NON_EQUILIBRIUM_RADIATION
 
 // ******************************************************************************
 // *    INITIALISE THE KINETIC COMPONENT                                        *
