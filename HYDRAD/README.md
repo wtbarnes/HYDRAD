@@ -17,6 +17,7 @@ This header file sets a series of `#defines` that are used like global variables
 
 | Variable | Type | Description | File Target(s) |
 |:--------:|:-----|:----------- |:-------------- |
+| `output_dir` | string | Directory where all the results will be printed | Used in the `CMesh` class |
 | `WRITE_FILE_PHYSICAL` | boolean | | |
 | `WRITE_FILE_ION_POPULATIONS` | boolean | | |
 | `WRITE_FILE_SCALES` | boolean | | |

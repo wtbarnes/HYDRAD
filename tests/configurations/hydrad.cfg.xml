@@ -5,6 +5,7 @@
 	<tabulated_gravity_file>Initial_Conditions/profiles/initial.amr.gravity</tabulated_gravity_file>
 	<duration>200.0</duration>
 	<!-- output options -->
+	<output_dir>Results/</output_dir>
 	<file_output_period>10</file_output_period>
 	<output_every_n_time_steps>1000</output_every_n_time_steps>
 	<write_file_physical>True</write_file_physical>

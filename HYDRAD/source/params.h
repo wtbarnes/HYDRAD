@@ -35,6 +35,7 @@ struct Parameters {
     double Duration, OutputPeriod;
 	
 	//Output options
+	char output_dir[256];
 	int output_every_n_time_steps;
 	bool write_file_physical, write_file_ion_populations, write_file_scales, write_file_terms;
 	//Physics options

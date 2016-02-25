@@ -60,7 +60,9 @@ return 23.0 - log( term1 );
 // Constructor
 CEquations::CEquations( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename )
 {
-Initialise(configFilename, rad_config_eqFilename, rad_config_neqFilename);
+
+	//Call initialiser
+	Initialise(configFilename, rad_config_eqFilename, rad_config_neqFilename);
 }
 
 // Destructor
@@ -94,6 +96,7 @@ sprintf(Params.Profiles,"%s",check_element(recursive_read(root,"ic_profiles"),"i
 sprintf(Params.GravityFilename,"%s",check_element(recursive_read(root,"tabulated_gravity_file"),"tabulated_gravity_file")->GetText());
 Params.Duration = atof(check_element(recursive_read(root,"duration"),"duration")->GetText());
 //Output options
+sprintf(Params.output_dir,"%s",check_element(recursive_read(root,"output_dir"),"output_dir")->GetText());
 Params.OutputPeriod = atof(check_element(recursive_read(root,"file_output_period"),"file_output_period")->GetText());
 Params.output_every_n_time_steps = atoi(check_element(recursive_read(root,"output_every_n_time_steps"),"output_every_n_time_steps")->GetText());
 Params.write_file_physical = string2bool(check_element(recursive_read(root,"write_file_physical"),"write_file_physical")->GetText());
