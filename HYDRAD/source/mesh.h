@@ -24,6 +24,9 @@ class CAdaptiveMesh : private CEquations {
 
     // The file number for the next set of output profiles
     int iFileNumber;
+	
+	// Non-equilibrium radiation configuration filename 
+	char radConfigNeqFilename[256];
 
     void CreateInitialMesh( void );
 

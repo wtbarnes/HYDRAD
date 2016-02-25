@@ -25,8 +25,11 @@
 // Constructor
 CAdaptiveMesh::CAdaptiveMesh( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename ) : CEquations( configFilename, rad_config_eqFilename, rad_config_neqFilename)
 {
-// Create the initial mesh given the steady-state profiles
-CreateInitialMesh();
+	//Set member variable(s)
+	radConfigNeqFilename = rad_config_neqFilename;
+	
+	// Create the initial mesh given the steady-state profiles
+	CreateInitialMesh();
 
 // Solve the equations
 Solve();
@@ -173,8 +176,7 @@ if(Params.non_equilibrium_radiation)
 	// the current time should be used
 	if( mesh_time > 0.0 )
 	{
-	    //TODO: need to read in the output filename, adjust here but bigger problem: get this to the place where the file is actually printed!
-		sprintf( szIonFilename, "Results/profile%i.ine", iFileNumber );
+		sprintf( szIonFilename, "%sprofile%i.ine", Params.output_dir, iFileNumber );
 	    pIonFile = fopen( szIonFilename, "r" );
 	}
 
@@ -186,9 +188,7 @@ if(Params.non_equilibrium_radiation)
 	    pActiveCell->GetCellProperties( &CellProperties );
 
 	    // Initialise the fractional populations of the ions
-		//TODO: somehow get the non-eq configuration filename to here
-		//TODO: other problems with CIonFrac class
-	    CellProperties.pIonFrac = new CIonFrac( NULL, (char *)"Radiation_Model/config/elements_neq.cfg", pRadiation );
+	    CellProperties.pIonFrac = new CIonFrac( NULL, radConfigNeqFilename, pRadiation );
 
 	    // If the mesh time is greater than 0.0 then get the nonequilibrium ion population corresponding to
 	    // the current time and position
@@ -227,10 +227,11 @@ if(Params.non_equilibrium_radiation)
 // *    INITIALISE THE KINETIC COMPONENT                                        *
 // ******************************************************************************
 
-#ifdef USE_KINETIC_MODEL
-CountCells();
-CreateIndexedCellList();
-#endif // USE_KINETIC_MODEL
+if(Params.use_kinetic_model)
+{
+	CountCells();
+	CreateIndexedCellList();
+}
 
 // ******************************************************************************
 // *    OUTPUT THE INITIAL STATE                                                *
@@ -240,7 +241,6 @@ EvaluateTerms( mesh_time, &mesh_delta_t, TRUE );
 WriteToFile();
 }
 
-#ifdef ADAPT
 void CAdaptiveMesh::Adapt( void )
 {
 PCELL pNextActiveCell, pFarLeftCell, pLeftCell, pRightCell, pFarRightCell, pNewCell[2];
@@ -248,18 +248,17 @@ CELLPROPERTIES FarLeftCellProperties, LeftCellProperties, CellProperties, RightC
 double drho = 0.0, dTE_KEe = 0.0, dTE_KEh = 0.0, x[6], y[6];
 int iProlonged, iRestricted, j;
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-double **ppIonFrac[6];
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation)
+{
+	double **ppIonFrac[6];
+}
 
-#ifdef LINEAR_RESTRICTION
-#else // LINEAR_RESTRICTION
-double error;
-#endif // LINEAR_RESTRICTION
+if(Params.linear_restriction==false)
+{
+	double error;
+}
 
-#ifdef ENFORCE_CONSERVATION
 double fWeight, temp1, temp2, temp3, temp4;
-#endif// ENFORCE_CONSERVATION
 
 // ******************************************************************************
 // *                                                                            *
@@ -284,74 +283,82 @@ do {
 	pRightCell->GetCellProperties( &RightCellProperties );
 
 	// Only neighbouring cells derived from the same parent cell can be merged
-	if( CellProperties.iRefinementLevel > 0 &&
-            CellProperties.iRefinementLevel == RightCellProperties.iRefinementLevel &&
-            CellProperties.iUniqueID[CellProperties.iRefinementLevel] == RightCellProperties.iUniqueID[RightCellProperties.iRefinementLevel] )
+	if( CellProperties.iRefinementLevel > 0 && CellProperties.iRefinementLevel == RightCellProperties.iRefinementLevel && CellProperties.iUniqueID[CellProperties.iRefinementLevel] == RightCellProperties.iUniqueID[RightCellProperties.iRefinementLevel] )
 	{
-#ifdef REFINE_ON_DENSITY
-            drho = 1.0 - ( min( CellProperties.rho[1], RightCellProperties.rho[1] ) / max( CellProperties.rho[1], RightCellProperties.rho[1] ) );
-#endif // REFINE_ON_DENSITY
-#ifdef REFINE_ON_ELECTRON_ENERGY
+		if(Params.refine_on_density)
+        {
+        	drho = 1.0 - ( min( CellProperties.rho[1], RightCellProperties.rho[1] ) / max( CellProperties.rho[1], RightCellProperties.rho[1] ) );
+        }
+		if(Params.refine_on_electron_energy)
+        {
             dTE_KEe = 1.0 - ( min( CellProperties.TE_KE[1][ELECTRON], RightCellProperties.TE_KE[1][ELECTRON] ) / max( CellProperties.TE_KE[1][ELECTRON], RightCellProperties.TE_KE[1][ELECTRON] ) );
-#endif // REFINE_ON_ELECTRON_ENERGY
-#ifdef REFINE_ON_HYDROGEN_ENERGY
+        }
+		if(Params.refine_on_hydrogen_energy)
+        {
             dTE_KEh = 1.0 - ( min( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) / max( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) );
-#endif // REFINE_ON_HYDROGEN_ENERGY
-            if( drho < MIN_FRAC_DIFF && dTE_KEe < MIN_FRAC_DIFF && dTE_KEh < MIN_FRAC_DIFF )
+        }
+            if( drho < Params.min_frac_diff && dTE_KEe < Params.min_frac_diff && dTE_KEh < Params.min_frac_diff )
             {
                 iProlonged = TRUE;
 
-		ZeroCellProperties( &(NewCellProperties[0]) );
+				ZeroCellProperties( &(NewCellProperties[0]) );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-		// Create a new ionfrac object for the new cell
-                if( CellProperties.pIonFrac )
-                    NewCellProperties[0].pIonFrac = new CIonFrac( CellProperties.pIonFrac, 0, pRadiation );
-#endif // NON_EQUILIBRIUM_RADIATION
+				if(Params.non_equilibrium_radiation)
+				{
+					// Create a new ionfrac object for the new cell
+	               	if( CellProperties.pIonFrac )
+					{
+	                   	NewCellProperties[0].pIonFrac = new CIonFrac( CellProperties.pIonFrac, 0, pRadiation );
+						
+					}
+				}
 
-#ifdef USE_KINETIC_MODEL
-		// Create a new kinetic object for the new cell
-		NewCellProperties[0].pKinetic = new CKinetic();
-#endif // USE_KINETIC_MODEL
+				if(Params.use_kinetic_model)
+				{
+					// Create a new kinetic object for the new cell
+					NewCellProperties[0].pKinetic = new CKinetic();
+				}
 
-		NewCellProperties[0].iRefinementLevel = CellProperties.iRefinementLevel - 1;
+				NewCellProperties[0].iRefinementLevel = CellProperties.iRefinementLevel - 1;
 
-		for( j=1; j<=NewCellProperties[0].iRefinementLevel; j++ )
+				for( j=1; j<=NewCellProperties[0].iRefinementLevel; j++ )
+                {
                     NewCellProperties[0].iUniqueID[j] = CellProperties.iUniqueID[j];
+                }
 
-		NewCellProperties[0].cell_width = CellProperties.cell_width + RightCellProperties.cell_width;
+				NewCellProperties[0].cell_width = CellProperties.cell_width + RightCellProperties.cell_width;
+				NewCellProperties[0].s[0] = CellProperties.s[0];
+				NewCellProperties[0].s[1] = CellProperties.s[2];
+				NewCellProperties[0].s[2] = RightCellProperties.s[2];
 
-		NewCellProperties[0].s[0] = CellProperties.s[0];
-		NewCellProperties[0].s[1] = CellProperties.s[2];
-		NewCellProperties[0].s[2] = RightCellProperties.s[2];
+				// ******************************************************************************
+				// *    ENSURE MASS, MOMENTUM AND ENERGY IS CONSERVED                           *
+				// ******************************************************************************
 
-// ******************************************************************************
-// *    ENSURE MASS, MOMENTUM AND ENERGY IS CONSERVED                           *
-// ******************************************************************************
+				// Averaging the mass density, momentum density and energy density of the two grid cells to calculate the corresponding quantities for the merged cell guarantees conservation
 
-		// Averaging the mass density, momentum density and energy density of the two grid cells to calculate the corresponding quantities for the merged cell guarantees conservation
-
-		NewCellProperties[0].rho[1] = ( CellProperties.rho[1] + RightCellProperties.rho[1] ) / 2.0;
+				NewCellProperties[0].rho[1] = ( CellProperties.rho[1] + RightCellProperties.rho[1] ) / 2.0;
 		
-		pLeftCell = pActiveCell->pGetPointer( LEFT );
-		pFarRightCell = pRightCell->pGetPointer( RIGHT );
-		if( pLeftCell && pFarRightCell )
-		{
-		    NewCellProperties[0].rho_v[1] = ( CellProperties.rho_v[1] + RightCellProperties.rho_v[1] ) / 2.0;
-		}
-		else
-		{
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
-		    NewCellProperties[0].rho_v[1] = 0.0;
-		}
+				pLeftCell = pActiveCell->pGetPointer( LEFT );
+				pFarRightCell = pRightCell->pGetPointer( RIGHT );
+				if( pLeftCell && pFarRightCell )
+				{
+		    		NewCellProperties[0].rho_v[1] = ( CellProperties.rho_v[1] + RightCellProperties.rho_v[1] ) / 2.0;
+				}
+				else
+				{
+					// ******************************************************************************
+					// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+					// ******************************************************************************
+		    		NewCellProperties[0].rho_v[1] = 0.0;
+				}
 
-		for( j=0; j<SPECIES; j++ )
+				for( j=0; j<SPECIES; j++ )
+				{
                     NewCellProperties[0].TE_KE[1][j] = ( CellProperties.TE_KE[1][j] + RightCellProperties.TE_KE[1][j] ) / 2.0;
-
-#ifdef NON_EQUILIBRIUM_RADIATION
-                if( NewCellProperties[0].pIonFrac )
+				}
+                    
+                if( NewCellProperties[0].pIonFrac && Params.non_equilibrium_radiation)
                 {
                     x[1] = CellProperties.s[1];
                     x[2] = RightCellProperties.s[1];
@@ -359,48 +366,46 @@ do {
                     ppIonFrac[2] = RightCellProperties.pIonFrac->ppGetIonFrac();
                     NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[0].s[1] );
                 }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-		pNewCell[0] = new CAdaptiveMeshCell( &(NewCellProperties[0]) );
+				pNewCell[0] = new CAdaptiveMeshCell( &(NewCellProperties[0]) );
 
-		if( pLeftCell )
-		{
-                    pLeftCell->SetPointer( RIGHT, pNewCell[0] );
-                    pNewCell[0]->SetPointer( LEFT, pLeftCell );
-		}
-		else
-		{
-                    pNewCell[0]->SetPointer( LEFT, NULL );
-                    pStartOfCurrentRow = pNewCell[0];
-		}
+				if( pLeftCell )
+				{
+        		            pLeftCell->SetPointer( RIGHT, pNewCell[0] );
+        		            pNewCell[0]->SetPointer( LEFT, pLeftCell );
+				}
+				else
+				{
+        		            pNewCell[0]->SetPointer( LEFT, NULL );
+        		            pStartOfCurrentRow = pNewCell[0];
+				}
+        		
+				if( pFarRightCell )
+				{
+        		            pNewCell[0]->SetPointer( RIGHT, pFarRightCell );
+        		            pFarRightCell->SetPointer( LEFT, pNewCell[0] );
+        		            pNextActiveCell = pFarRightCell;
+				}
+				else
+				{
+        		            pNewCell[0]->SetPointer( RIGHT, NULL );
+        		            pNextActiveCell = pNewCell[0];
+				}
 
-		if( pFarRightCell )
-		{
-                    pNewCell[0]->SetPointer( RIGHT, pFarRightCell );
-                    pFarRightCell->SetPointer( LEFT, pNewCell[0] );
-                    pNextActiveCell = pFarRightCell;
-		}
-		else
-		{
-                    pNewCell[0]->SetPointer( RIGHT, NULL );
-                    pNextActiveCell = pNewCell[0];
-		}
-
-#ifdef NON_EQUILIBRIUM_RADIATION
-                if( CellProperties.pIonFrac && RightCellProperties.pIonFrac )
+                if( CellProperties.pIonFrac && RightCellProperties.pIonFrac && Params.non_equilibrium_radiation)
                 {
                     delete CellProperties.pIonFrac;
                     delete RightCellProperties.pIonFrac;
                 }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-#ifdef USE_KINETIC_MODEL
-		delete CellProperties.pKinetic;
-		delete RightCellProperties.pKinetic;
-#endif // USE_KINETIC_MODEL
+				if(Params.use_kinetic_model)
+				{
+					delete CellProperties.pKinetic;
+					delete RightCellProperties.pKinetic;
+				}
 
-		delete pActiveCell;
-		delete pRightCell;
+				delete pActiveCell;
+				delete pRightCell;
             }
             else
             {
@@ -435,73 +440,75 @@ do {
 
 	pRightCell = pActiveCell->pGetPointer( RIGHT );
 	pRightCell->GetCellProperties( &RightCellProperties );
-#ifdef REFINE_ON_DENSITY
-	drho = 1.0 - ( min( CellProperties.rho[1], RightCellProperties.rho[1] ) / max( CellProperties.rho[1], RightCellProperties.rho[1] ) );
-#endif // REFINE_ON_DENSITY
-#ifdef REFINE_ON_ELECTRON_ENERGY
-	dTE_KEe = 1.0 - ( min( CellProperties.TE_KE[1][ELECTRON], RightCellProperties.TE_KE[1][ELECTRON] ) / max( CellProperties.TE_KE[1][ELECTRON], RightCellProperties.TE_KE[1][ELECTRON] ) );
-#endif // REFINE_ON_ELECTRON_ENERGY
-#ifdef REFINE_ON_HYDROGEN_ENERGY
-	dTE_KEh = 1.0 - ( min( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) / max( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) );
-#endif // REFINE_ON_HYDROGEN_ENERGY
-	if( ( drho > MAX_FRAC_DIFF || dTE_KEe > MAX_FRAC_DIFF || dTE_KEh > MAX_FRAC_DIFF || abs( CellProperties.iRefinementLevel - RightCellProperties.iRefinementLevel ) > 1 ) &&
-            ( CellProperties.iRefinementLevel < MAX_REFINEMENT_LEVEL || RightCellProperties.iRefinementLevel < MAX_REFINEMENT_LEVEL ) )
+	
+	if(Params.refine_on_density)
+	{
+		drho = 1.0 - ( min( CellProperties.rho[1], RightCellProperties.rho[1] ) / max( CellProperties.rho[1], RightCellProperties.rho[1] ) );
+	}
+	
+	if(Params.refine_on_electron_energy)
+	{
+		dTE_KEe = 1.0 - ( min( CellProperties.TE_KE[1][ELECTRON], RightCellProperties.TE_KE[1][ELECTRON] ) / max( CellProperties.TE_KE[1][ELECTRON], RightCellProperties.TE_KE[1][ELECTRON] ) );
+	}
+	
+	if(Params.refine_on_hydrogen_energy)
+	{
+		dTE_KEh = 1.0 - ( min( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) / max( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) );
+	}
+	
+	if( ( drho > MAX_FRAC_DIFF || dTE_KEe > MAX_FRAC_DIFF || dTE_KEh > MAX_FRAC_DIFF || abs( CellProperties.iRefinementLevel - RightCellProperties.iRefinementLevel ) > 1 ) && ( CellProperties.iRefinementLevel < MAX_REFINEMENT_LEVEL || RightCellProperties.iRefinementLevel < Params.max_refinement_level ) )
 	{
             iRestricted = TRUE;
 
             if( CellProperties.iRefinementLevel <= RightCellProperties.iRefinementLevel )
             {
                 // Refine the current cell
-
                 ZeroCellProperties( &(NewCellProperties[0]) );
-		ZeroCellProperties( &(NewCellProperties[1]) );
+				ZeroCellProperties( &(NewCellProperties[1]) );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                if( CellProperties.pIonFrac )
+                if( CellProperties.pIonFrac && Params.non_equilibrium_radiation)
                 {
                     // Create a new ionfrac object for each new cell
                     NewCellProperties[0].pIonFrac = new CIonFrac( CellProperties.pIonFrac, 0, pRadiation );
                     NewCellProperties[1].pIonFrac = new CIonFrac( CellProperties.pIonFrac, 0, pRadiation );
                 }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-#ifdef USE_KINETIC_MODEL
-		// Create a new kinetic object for each new cell
-		NewCellProperties[0].pKinetic = new CKinetic();
-		NewCellProperties[1].pKinetic = new CKinetic();
-#endif // USE_KINETIC_MODEL
+				if(Params.use_kinetic_model)
+				{
+					// Create a new kinetic object for each new cell
+					NewCellProperties[0].pKinetic = new CKinetic();
+					NewCellProperties[1].pKinetic = new CKinetic();
+				}
 
-		NewCellProperties[0].iRefinementLevel = CellProperties.iRefinementLevel + 1;
-		NewCellProperties[1].iRefinementLevel = NewCellProperties[0].iRefinementLevel;
+				NewCellProperties[0].iRefinementLevel = CellProperties.iRefinementLevel + 1;
+				NewCellProperties[1].iRefinementLevel = NewCellProperties[0].iRefinementLevel;
 
-		for( j=1; j<=CellProperties.iRefinementLevel; j++ )
-		{
-                    NewCellProperties[0].iUniqueID[j] = CellProperties.iUniqueID[j];
-                    NewCellProperties[1].iUniqueID[j] = CellProperties.iUniqueID[j];
-		}
+				for( j=1; j<=CellProperties.iRefinementLevel; j++ )
+				{
+		                    NewCellProperties[0].iUniqueID[j] = CellProperties.iUniqueID[j];
+		                    NewCellProperties[1].iUniqueID[j] = CellProperties.iUniqueID[j];
+				}
 
-		NewCellProperties[0].cell_width = 0.5 * CellProperties.cell_width;
-		NewCellProperties[1].cell_width = NewCellProperties[0].cell_width;
-
-		NewCellProperties[0].s[0] = CellProperties.s[0];
-		NewCellProperties[0].s[1] = NewCellProperties[0].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
-		NewCellProperties[0].s[2] = CellProperties.s[1];
-		NewCellProperties[1].s[0] = CellProperties.s[1];
-		NewCellProperties[1].s[1] = NewCellProperties[1].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
-		NewCellProperties[1].s[2] = CellProperties.s[2];
+				NewCellProperties[0].cell_width = 0.5 * CellProperties.cell_width;
+				NewCellProperties[1].cell_width = NewCellProperties[0].cell_width;
+				NewCellProperties[0].s[0] = CellProperties.s[0];
+				NewCellProperties[0].s[1] = NewCellProperties[0].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
+				NewCellProperties[0].s[2] = CellProperties.s[1];
+				NewCellProperties[1].s[0] = CellProperties.s[1];
+				NewCellProperties[1].s[1] = NewCellProperties[1].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
+				NewCellProperties[1].s[2] = CellProperties.s[2];
 		
-		pLeftCell = pActiveCell->pGetPointer( LEFT );
+				pLeftCell = pActiveCell->pGetPointer( LEFT );
 
-		if( pLeftCell )
-		{
+				if( pLeftCell )
+				{
                     pLeftCell->GetCellProperties( &LeftCellProperties );
 
                     do {
 
                         NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] = rand();
 
-                    } while ( NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == LeftCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] ||
-                        NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == RightCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] );
+                    } while ( NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == LeftCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] || NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == RightCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] );
 
                     NewCellProperties[1].iUniqueID[NewCellProperties[1].iRefinementLevel] = NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel];
 
@@ -510,89 +517,104 @@ do {
 			
                     if( pFarLeftCell && pFarRightCell )
                     {
-			pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
-			pFarRightCell->GetCellProperties( &FarRightCellProperties );
+						pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
+						pFarRightCell->GetCellProperties( &FarRightCellProperties );
 
-			// NEW CELLS
+						// NEW CELLS
+						x[1] = FarLeftCellProperties.s[1];
+						x[2] = LeftCellProperties.s[1];
+						x[3] = CellProperties.s[1];
+						x[4] = RightCellProperties.s[1];
+						x[5] = FarRightCellProperties.s[1];
+						y[1] = FarLeftCellProperties.rho[1];
+						y[2] = LeftCellProperties.rho[1];
+						y[3] = CellProperties.rho[1];
+						y[4] = RightCellProperties.rho[1];
+						y[5] = FarRightCellProperties.rho[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
+							
+						}
 
-			x[1] = FarLeftCellProperties.s[1];
-			x[2] = LeftCellProperties.s[1];
-			x[3] = CellProperties.s[1];
-			x[4] = RightCellProperties.s[1];
-			x[5] = FarRightCellProperties.s[1];
+						y[1] = FarLeftCellProperties.rho_v[1];
+						y[2] = LeftCellProperties.rho_v[1];
+						y[3] = CellProperties.rho_v[1];
+						y[4] = RightCellProperties.rho_v[1];
+						y[5] = FarRightCellProperties.rho_v[1];
 
-			y[1] = FarLeftCellProperties.rho[1];
-			y[2] = LeftCellProperties.rho[1];
-			y[3] = CellProperties.rho[1];
-			y[4] = RightCellProperties.rho[1];
-			y[5] = FarRightCellProperties.rho[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
-#endif // LINEAR_RESTRICTION
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
+							
+						}
 
-			y[1] = FarLeftCellProperties.rho_v[1];
-			y[2] = LeftCellProperties.rho_v[1];
-			y[3] = CellProperties.rho_v[1];
-			y[4] = RightCellProperties.rho_v[1];
-			y[5] = FarRightCellProperties.rho_v[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
-#endif // LINEAR_RESTRICTION
+						for( j=0; j<SPECIES; j++ )
+						{
+			                y[1] = FarLeftCellProperties.TE_KE[1][j];
+			                y[2] = LeftCellProperties.TE_KE[1][j];
+			                y[3] = CellProperties.TE_KE[1][j];
+			                y[4] = RightCellProperties.TE_KE[1][j];
+			                y[5] = FarRightCellProperties.TE_KE[1][j];
+							
+							if(Params.linear_restriction)
+							{
+			                    LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
+			                    LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
+								
+							}
+							else
+							{
+			                    FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
+			                    FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
+								
+							}
+						}
 
-			for( j=0; j<SPECIES; j++ )
-			{
-                            y[1] = FarLeftCellProperties.TE_KE[1][j];
-                            y[2] = LeftCellProperties.TE_KE[1][j];
-                            y[3] = CellProperties.TE_KE[1][j];
-                            y[4] = RightCellProperties.TE_KE[1][j];
-                            y[5] = FarRightCellProperties.TE_KE[1][j];
-#ifdef LINEAR_RESTRICTION
-                            LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
-                            LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
-#else
-                            FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
-                            FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
-#endif // LINEAR_RESTRICTION
-			}
-
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac )
+                        if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = FarLeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[3] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[4] = RightCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[5] = FarRightCellProperties.pIonFrac->ppGetIonFrac();
-#ifdef LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
-#else // LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
-#endif // LINEAR_RESTRICTION
+							if(Params.linear_restriction)
+                            {
+	                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
+	                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
+                            }
+							else
+							{
+	                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
+	                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
+							}
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
                     }
                     else if( !pFarLeftCell )
                     {
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
-
-// LEFT-HAND BOUNDARY
+						// ******************************************************************************
+						// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+						// ******************************************************************************
+                    	
+						// LEFT-HAND BOUNDARY
                         
                         // Implement hydrostatic boundary conditions in the left-most of the two new cells
 
                         x[1] = LeftCellProperties.s[1];
-			x[2] = CellProperties.s[1];
+						x[2] = CellProperties.s[1];
 
                         y[1] = LeftCellProperties.rho[1];
                         y[2] = CellProperties.rho[1];
@@ -607,159 +629,183 @@ do {
                             LinearFit( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
                         }
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[0].pIonFrac )
+                        if( NewCellProperties[0].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = CellProperties.pIonFrac->ppGetIonFrac();
                             NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[0].s[1] );
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-			pFarRightCell->GetCellProperties( &FarRightCellProperties );
-
-			x[2] = LeftCellProperties.s[1];
-			x[3] = CellProperties.s[1];
-			x[4] = RightCellProperties.s[1];
-			x[5] = FarRightCellProperties.s[1];
+						pFarRightCell->GetCellProperties( &FarRightCellProperties );
+            			
+						x[2] = LeftCellProperties.s[1];
+						x[3] = CellProperties.s[1];
+						x[4] = RightCellProperties.s[1];
+						x[5] = FarRightCellProperties.s[1];
+									
+						y[2] = LeftCellProperties.rho[1];
+						y[3] = CellProperties.rho[1];
+						y[4] = RightCellProperties.rho[1];
+						y[5] = FarRightCellProperties.rho[1];
 						
-			y[2] = LeftCellProperties.rho[1];
-			y[3] = CellProperties.rho[1];
-			y[4] = RightCellProperties.rho[1];
-			y[5] = FarRightCellProperties.rho[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
-#else
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
-#endif // LINEAR_RESTRICTION
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
+						}
+						else
+						{
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
+						}
 
-			y[2] = LeftCellProperties.rho_v[1];
-			y[3] = CellProperties.rho_v[1];
-			y[4] = RightCellProperties.rho_v[1];
-			y[5] = FarRightCellProperties.rho_v[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
-#else
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[2] = LeftCellProperties.rho_v[1];
+						y[3] = CellProperties.rho_v[1];
+						y[4] = RightCellProperties.rho_v[1];
+						y[5] = FarRightCellProperties.rho_v[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
+						}
+						else
+						{
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
+						}
 
-			for( j=0; j<SPECIES; j++ )
-			{
+						for( j=0; j<SPECIES; j++ )
+						{
                             y[2] = LeftCellProperties.TE_KE[1][j];
                             y[3] = CellProperties.TE_KE[1][j];
                             y[4] = RightCellProperties.TE_KE[1][j];
                             y[5] = FarRightCellProperties.TE_KE[1][j];
-#ifdef LINEAR_RESTRICTION
-                            LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
-#else
-                            FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
-#endif // LINEAR_RESTRICTION
-			}
+							
+                            if(Params.linear_restriction)
+							{
+                            	LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
+                            }
+							else
+                            {
+                            	FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
+                            }
+						}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[1].pIonFrac )
+                        if( NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[2] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[3] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[4] = RightCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[5] = FarRightCellProperties.pIonFrac->ppGetIonFrac();
-#ifdef LINEAR_RESTRICTION
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
-#else // LINEAR_RESTRICTION
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
-#endif // LINEAR_RESTRICTION
+							
+                            if(Params.linear_restriction)
+							{
+								NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
+                            }
+							else 
+                            {
+								NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
+                            }
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
                     }
                     else if( !pFarRightCell )
                     {
-			pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
+						pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
 
-			x[1] = FarLeftCellProperties.s[1];
-			x[2] = LeftCellProperties.s[1];
-			x[3] = CellProperties.s[1];
-			x[4] = RightCellProperties.s[1];
+						x[1] = FarLeftCellProperties.s[1];
+						x[2] = LeftCellProperties.s[1];
+						x[3] = CellProperties.s[1];
+						x[4] = RightCellProperties.s[1];
 
-			y[1] = FarLeftCellProperties.rho[1];
-			y[2] = LeftCellProperties.rho[1];
-			y[3] = CellProperties.rho[1];
-			y[4] = RightCellProperties.rho[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[1] = FarLeftCellProperties.rho[1];
+						y[2] = LeftCellProperties.rho[1];
+						y[3] = CellProperties.rho[1];
+						y[4] = RightCellProperties.rho[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
+						}	
 
-			y[1] = FarLeftCellProperties.rho_v[1];
-			y[2] = LeftCellProperties.rho_v[1];
-			y[3] = CellProperties.rho_v[1];
-			y[4] = RightCellProperties.rho_v[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[1] = FarLeftCellProperties.rho_v[1];
+						y[2] = LeftCellProperties.rho_v[1];
+						y[3] = CellProperties.rho_v[1];
+						y[4] = RightCellProperties.rho_v[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
+						}
 
-			for( j=0; j<SPECIES; j++ )
-			{
+						for( j=0; j<SPECIES; j++ )
+						{
                             y[1] = FarLeftCellProperties.TE_KE[1][j];
                             y[2] = LeftCellProperties.TE_KE[1][j];
                             y[3] = CellProperties.TE_KE[1][j];
                             y[4] = RightCellProperties.TE_KE[1][j];
-#ifdef LINEAR_RESTRICTION
-                            LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
-#else
-                            FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
-#endif // LINEAR_RESTRICTION
-			}
+							
+							if(Params.linear_restriction)
+                            {
+								LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
+                            }
+							else
+                            {
+								FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
+                            }
+						}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[0].pIonFrac )
+                        if( NewCellProperties[0].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = FarLeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[3] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[4] = RightCellProperties.pIonFrac->ppGetIonFrac();
-#ifdef LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
-#else // LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
-#endif // LINEAR_RESTRICTION
+							
+                            if(Params.linear_restriction)
+							{
+								NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
+                            }
+							else 
+                            {
+								NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
+                            }
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
+						// ******************************************************************************
+						// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+						// ******************************************************************************
+            			
+						// RIGHT-HAND BOUNDARY
 
-// RIGHT-HAND BOUNDARY
+			            // Implement hydrostatic boundary conditions in the right-most of the two new cells
 
-                        // Implement hydrostatic boundary conditions in the right-most of the two new cells
+			            x[1] = CellProperties.s[1];
+						x[2] = RightCellProperties.s[1];
 
-                        x[1] = CellProperties.s[1];
-			x[2] = RightCellProperties.s[1];
-
-                        y[1] = CellProperties.rho[1];
+			            y[1] = CellProperties.rho[1];
                         y[2] = RightCellProperties.rho[1];
                         LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
 
-                        NewCellProperties[1].rho_v[1] = 0.0;
+			            NewCellProperties[1].rho_v[1] = 0.0;
 
-                        for( j=0; j<SPECIES; j++ )
+      					for( j=0; j<SPECIES; j++ )
                         {
                             y[1] = CellProperties.TE_KE[1][j];
                             y[2] = RightCellProperties.TE_KE[1][j];
                             LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
                         }
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[1].pIonFrac )
+                        if( NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = RightCellProperties.pIonFrac->ppGetIonFrac();
                             NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[1].s[1] );
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
                     }
 		}
 		else
@@ -772,16 +818,16 @@ do {
 
                     NewCellProperties[1].iUniqueID[NewCellProperties[1].iRefinementLevel] = NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel];
 
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
-
-// LEFT-HAND BOUNDARY
+					// ******************************************************************************
+					// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+					// ******************************************************************************
+					
+					// LEFT-HAND BOUNDARY
 
                     // NEW CELLS
 
                     x[1] = CellProperties.s[1];
-		    x[2] = RightCellProperties.s[1];
+		    		x[2] = RightCellProperties.s[1];
 
                     y[1] = CellProperties.rho[1];
                     y[2] = RightCellProperties.rho[1];
@@ -799,57 +845,56 @@ do {
                         LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
                     }
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                    if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac )
+                    if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                     {
                         ppIonFrac[1] = CellProperties.pIonFrac->ppGetIonFrac();
                         ppIonFrac[2] = RightCellProperties.pIonFrac->ppGetIonFrac();
                         NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[0].s[1] );
                         NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[1].s[1] );
                     }
-#endif // NON_EQUILIBRIUM_RADIATION
 		}
 
 // ******************************************************************************
 // *    ENSURE MASS AND ENERGY IS CONSERVED BY THE RESTRICTION OPERATOR         *
 // ******************************************************************************
-#ifdef ENFORCE_CONSERVATION
-		// A correction is applied to the mass and energy densities in the event that the sum of the integrated quantities in the new cells does not equal the integrated quantity in the original cell
-
-		fWeight = ( 2.0 * CellProperties.rho[1] ) / ( NewCellProperties[0].rho[1] + NewCellProperties[1].rho[1] );
-		NewCellProperties[0].rho[1] *= fWeight;
-		NewCellProperties[1].rho[1] *= fWeight;
-
-		if( NewCellProperties[0].rho_v[1] || NewCellProperties[1].rho_v[1] )
+		if(Params.enforce_conservation)
 		{
-                    temp1 = ( 2.0 * CellProperties.rho_v[1] ) - ( NewCellProperties[0].rho_v[1] + NewCellProperties[1].rho_v[1] );
-                    temp2 = fabs( NewCellProperties[0].rho_v[1] );
-                    temp3 = fabs( NewCellProperties[1].rho_v[1] );
-                    temp4 = temp1 / ( temp2 + temp3 );
-                    NewCellProperties[0].rho_v[1] += ( temp2 * temp4 );
-                    NewCellProperties[1].rho_v[1] += ( temp3 * temp4 );
+			// A correction is applied to the mass and energy densities in the event that the sum of the integrated quantities in the new cells does not equal the integrated quantity in the original cell
+
+			fWeight = ( 2.0 * CellProperties.rho[1] ) / ( NewCellProperties[0].rho[1] + NewCellProperties[1].rho[1] );
+			NewCellProperties[0].rho[1] *= fWeight;
+			NewCellProperties[1].rho[1] *= fWeight;
+
+			if( NewCellProperties[0].rho_v[1] || NewCellProperties[1].rho_v[1] )
+			{
+	                    temp1 = ( 2.0 * CellProperties.rho_v[1] ) - ( NewCellProperties[0].rho_v[1] + NewCellProperties[1].rho_v[1] );
+	                    temp2 = fabs( NewCellProperties[0].rho_v[1] );
+	                    temp3 = fabs( NewCellProperties[1].rho_v[1] );
+	                    temp4 = temp1 / ( temp2 + temp3 );
+	                    NewCellProperties[0].rho_v[1] += ( temp2 * temp4 );
+	                    NewCellProperties[1].rho_v[1] += ( temp3 * temp4 );
+			}
+
+			for( j=0; j<SPECIES; j++ )
+			{
+			    fWeight = ( 2.0 * CellProperties.TE_KE[1][j] ) / ( NewCellProperties[0].TE_KE[1][j] + NewCellProperties[1].TE_KE[1][j] );
+			    NewCellProperties[0].TE_KE[1][j] *= fWeight;
+			    NewCellProperties[1].TE_KE[1][j] *= fWeight;
+			}
 		}
 
-		for( j=0; j<SPECIES; j++ )
-		{
-		    fWeight = ( 2.0 * CellProperties.TE_KE[1][j] ) / ( NewCellProperties[0].TE_KE[1][j] + NewCellProperties[1].TE_KE[1][j] );
-		    NewCellProperties[0].TE_KE[1][j] *= fWeight;
-		    NewCellProperties[1].TE_KE[1][j] *= fWeight;
-		}
-#endif // ENFORCE_CONSERVATION
-
-                pNewCell[0] = new CAdaptiveMeshCell( &(NewCellProperties[0]) );
+        pNewCell[0] = new CAdaptiveMeshCell( &(NewCellProperties[0]) );
 		pNewCell[1] = new CAdaptiveMeshCell( &(NewCellProperties[1]) );
                 
 		if( pLeftCell )
 		{
-                    pLeftCell->SetPointer( RIGHT, pNewCell[0] );
-                    pNewCell[0]->SetPointer( LEFT, pLeftCell );
+        	pLeftCell->SetPointer( RIGHT, pNewCell[0] );
+            pNewCell[0]->SetPointer( LEFT, pLeftCell );
 		}
 		else
 		{
-                    pNewCell[0]->SetPointer( LEFT, NULL );
-                    pStartOfCurrentRow = pNewCell[0];
+        	pNewCell[0]->SetPointer( LEFT, NULL );
+            pStartOfCurrentRow = pNewCell[0];
 		}
 
 		pNewCell[0]->SetPointer( RIGHT, pNewCell[1] );
@@ -858,14 +903,15 @@ do {
 		pNewCell[1]->SetPointer( RIGHT, pRightCell );
 		pRightCell->SetPointer( LEFT, pNewCell[1] );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                if( CellProperties.pIonFrac )
-                    delete CellProperties.pIonFrac;
-#endif // NON_EQUILIBRIUM_RADIATION
+	    if( CellProperties.pIonFrac && Params.non_equilibrium_radiation)
+	    {
+	    	delete CellProperties.pIonFrac;
+	    }
 
-#ifdef USE_KINETIC_MODEL
+		if(Params.use_kinetic_model)
+        {
         	delete CellProperties.pKinetic;
-#endif // USE_KINETIC_MODEL
+        }
 
 		delete pActiveCell;
 
@@ -875,61 +921,59 @@ do {
             {
                 // Refine the right-hand cell
 
-		// First shift the left-hand and active cells to the right
-		pLeftCell = pActiveCell;
-		pLeftCell->GetCellProperties( &LeftCellProperties );
-		pActiveCell = pRightCell;
-		pActiveCell->GetCellProperties( &CellProperties );
+				// First shift the left-hand and active cells to the right
+				pLeftCell = pActiveCell;
+				pLeftCell->GetCellProperties( &LeftCellProperties );
+				pActiveCell = pRightCell;
+				pActiveCell->GetCellProperties( &CellProperties );
 
-		ZeroCellProperties( &(NewCellProperties[0]) );
-		ZeroCellProperties( &(NewCellProperties[1]) );
+				ZeroCellProperties( &(NewCellProperties[0]) );
+				ZeroCellProperties( &(NewCellProperties[1]) );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                if( CellProperties.pIonFrac )
+                if( CellProperties.pIonFrac && Params.non_equilibrium_radiation)
                 {
                     // Create a new ionfrac object for each new cell
                     NewCellProperties[0].pIonFrac = new CIonFrac( CellProperties.pIonFrac, 0, pRadiation );
                     NewCellProperties[1].pIonFrac = new CIonFrac( CellProperties.pIonFrac, 0, pRadiation );
                 }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-#ifdef USE_KINETIC_MODEL
-		// Create a new kinetic object for each new cell
-		NewCellProperties[0].pKinetic = new CKinetic();
-		NewCellProperties[1].pKinetic = new CKinetic();
-#endif // USE_KINETIC_MODEL
+				if(Params.use_kinetic_model)
+				{
+					// Create a new kinetic object for each new cell
+					NewCellProperties[0].pKinetic = new CKinetic();
+					NewCellProperties[1].pKinetic = new CKinetic();
+				}
 
-		NewCellProperties[0].iRefinementLevel = CellProperties.iRefinementLevel + 1;
-		NewCellProperties[1].iRefinementLevel = NewCellProperties[0].iRefinementLevel;
+				NewCellProperties[0].iRefinementLevel = CellProperties.iRefinementLevel + 1;
+				NewCellProperties[1].iRefinementLevel = NewCellProperties[0].iRefinementLevel;
 
-		for( j=1; j<=CellProperties.iRefinementLevel; j++ )
-		{
-                    NewCellProperties[0].iUniqueID[j] = CellProperties.iUniqueID[j];
-                    NewCellProperties[1].iUniqueID[j] = CellProperties.iUniqueID[j];
-		}
+				for( j=1; j<=CellProperties.iRefinementLevel; j++ )
+				{
+		                    NewCellProperties[0].iUniqueID[j] = CellProperties.iUniqueID[j];
+		                    NewCellProperties[1].iUniqueID[j] = CellProperties.iUniqueID[j];
+				}
 
-		NewCellProperties[0].cell_width = 0.5 * CellProperties.cell_width;
-		NewCellProperties[1].cell_width = NewCellProperties[0].cell_width;
+				NewCellProperties[0].cell_width = 0.5 * CellProperties.cell_width;
+				NewCellProperties[1].cell_width = NewCellProperties[0].cell_width;
 
-		NewCellProperties[0].s[0] = CellProperties.s[0];
-		NewCellProperties[0].s[1] = NewCellProperties[0].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
-		NewCellProperties[0].s[2] = CellProperties.s[1];
-		NewCellProperties[1].s[0] = CellProperties.s[1];
-		NewCellProperties[1].s[1] = NewCellProperties[1].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
-		NewCellProperties[1].s[2] = CellProperties.s[2];
+				NewCellProperties[0].s[0] = CellProperties.s[0];
+				NewCellProperties[0].s[1] = NewCellProperties[0].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
+				NewCellProperties[0].s[2] = CellProperties.s[1];
+				NewCellProperties[1].s[0] = CellProperties.s[1];
+				NewCellProperties[1].s[1] = NewCellProperties[1].s[0] + ( 0.5 * NewCellProperties[0].cell_width );
+				NewCellProperties[1].s[2] = CellProperties.s[2];
 
-		pRightCell = pActiveCell->pGetPointer( RIGHT );
+				pRightCell = pActiveCell->pGetPointer( RIGHT );
 
                 if( pRightCell )
-		{
+				{
                     pRightCell->GetCellProperties( &RightCellProperties );
 
                     do {
 
                         NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] = rand();
 
-                    } while ( NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == LeftCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] ||
-                        NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == RightCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] );
+                    } while ( NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == LeftCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] || NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == RightCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] );
 
                     NewCellProperties[1].iUniqueID[NewCellProperties[1].iRefinementLevel] = NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel];
 
@@ -938,89 +982,100 @@ do {
 			
                     if( pFarLeftCell && pFarRightCell )
                     {
-			pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
-			pFarRightCell->GetCellProperties( &FarRightCellProperties );
+						pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
+						pFarRightCell->GetCellProperties( &FarRightCellProperties );
 
-			// NEW CELLS
+						// NEW CELLS
+						x[1] = FarLeftCellProperties.s[1];
+						x[2] = LeftCellProperties.s[1];
+						x[3] = CellProperties.s[1];
+						x[4] = RightCellProperties.s[1];
+						x[5] = FarRightCellProperties.s[1];
 
-			x[1] = FarLeftCellProperties.s[1];
-			x[2] = LeftCellProperties.s[1];
-			x[3] = CellProperties.s[1];
-			x[4] = RightCellProperties.s[1];
-			x[5] = FarRightCellProperties.s[1];
+						y[1] = FarLeftCellProperties.rho[1];
+						y[2] = LeftCellProperties.rho[1];
+						y[3] = CellProperties.rho[1];
+						y[4] = RightCellProperties.rho[1];
+						y[5] = FarRightCellProperties.rho[1];
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
+						}
 
-			y[1] = FarLeftCellProperties.rho[1];
-			y[2] = LeftCellProperties.rho[1];
-			y[3] = CellProperties.rho[1];
-			y[4] = RightCellProperties.rho[1];
-			y[5] = FarRightCellProperties.rho[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[1] = FarLeftCellProperties.rho_v[1];
+						y[2] = LeftCellProperties.rho_v[1];
+						y[3] = CellProperties.rho_v[1];
+						y[4] = RightCellProperties.rho_v[1];
+						y[5] = FarRightCellProperties.rho_v[1];
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
+						}
 
-			y[1] = FarLeftCellProperties.rho_v[1];
-			y[2] = LeftCellProperties.rho_v[1];
-			y[3] = CellProperties.rho_v[1];
-			y[4] = RightCellProperties.rho_v[1];
-			y[5] = FarRightCellProperties.rho_v[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
-#endif // LINEAR_RESTRICTION
-
-			for( j=0; j<SPECIES; j++ )
-			{
+						for( j=0; j<SPECIES; j++ )
+						{
                             y[1] = FarLeftCellProperties.TE_KE[1][j];
                             y[2] = LeftCellProperties.TE_KE[1][j];
                             y[3] = CellProperties.TE_KE[1][j];
                             y[4] = RightCellProperties.TE_KE[1][j];
                             y[5] = FarRightCellProperties.TE_KE[1][j];
-#ifdef LINEAR_RESTRICTION
-                            LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
-                            LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
-#else
-                            FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
-                            FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
-#endif // LINEAR_RESTRICTION
-			}
+			
+							if(Params.linear_restriction)
+                            {
+	                            LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
+	                            LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
+                            }
+							else
+                            {
+	                            FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
+	                            FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
+                            }
+						}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac )
+                        if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = FarLeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[3] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[4] = RightCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[5] = FarRightCellProperties.pIonFrac->ppGetIonFrac();
-#ifdef LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
-#else // LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
-#endif // LINEAR_RESTRICTION
+							
+							if(Params.linear_restriction)
+                            {
+	                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
+	                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
+                            }
+							else
+                            {
+	                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
+	                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
+                            }
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
                     }
                     else if( !pFarLeftCell )
                     {
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
-
-// LEFT-HAND BOUNDARY
+						// ******************************************************************************
+						// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+						// ******************************************************************************
+						
+						// LEFT-HAND BOUNDARY
 
                         // Implement hydrostatic boundary conditions in the left-most of the two new cells
 
                         x[1] = LeftCellProperties.s[1];
-			x[2] = CellProperties.s[1];
+						x[2] = CellProperties.s[1];
 
                         y[1] = LeftCellProperties.rho[1];
                         y[2] = CellProperties.rho[1];
@@ -1035,137 +1090,163 @@ do {
                             LinearFit( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
                         }
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[0].pIonFrac )
+                        if( NewCellProperties[0].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = CellProperties.pIonFrac->ppGetIonFrac();
                             NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[0].s[1] );
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-			pFarRightCell->GetCellProperties( &FarRightCellProperties );
+						pFarRightCell->GetCellProperties( &FarRightCellProperties );
 
-			x[2] = LeftCellProperties.s[1];
-			x[3] = CellProperties.s[1];
-			x[4] = RightCellProperties.s[1];
-			x[5] = FarRightCellProperties.s[1];
+						x[2] = LeftCellProperties.s[1];
+						x[3] = CellProperties.s[1];
+						x[4] = RightCellProperties.s[1];
+						x[5] = FarRightCellProperties.s[1];
 						
-			y[2] = LeftCellProperties.rho[1];
-			y[3] = CellProperties.rho[1];
-			y[4] = RightCellProperties.rho[1];
-			y[5] = FarRightCellProperties.rho[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
-#else
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[2] = LeftCellProperties.rho[1];
+						y[3] = CellProperties.rho[1];
+						y[4] = RightCellProperties.rho[1];
+						y[5] = FarRightCellProperties.rho[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
+						}
+						else
+						{
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]), &error );
+						}
 
-			y[2] = LeftCellProperties.rho_v[1];
-			y[3] = CellProperties.rho_v[1];
-			y[4] = RightCellProperties.rho_v[1];
-			y[5] = FarRightCellProperties.rho_v[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
-#else
-			FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[2] = LeftCellProperties.rho_v[1];
+						y[3] = CellProperties.rho_v[1];
+						y[4] = RightCellProperties.rho_v[1];
+						y[5] = FarRightCellProperties.rho_v[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]) );
+						}
+						else
+						{
+							FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].rho_v[1]), &error );
+						}
 
-			for( j=0; j<SPECIES; j++ )
-			{
+						for( j=0; j<SPECIES; j++ )
+						{
                             y[2] = LeftCellProperties.TE_KE[1][j];
                             y[3] = CellProperties.TE_KE[1][j];
                             y[4] = RightCellProperties.TE_KE[1][j];
                             y[5] = FarRightCellProperties.TE_KE[1][j];
-#ifdef LINEAR_RESTRICTION
-                            LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
-#else
-                            FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
-#endif // LINEAR_RESTRICTION
-			}
+							
+                            if(Params.linear_restriction)
+							{
+ 							   LinearFit( &(x[2]), &(y[2]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
+                            }
+							else
+							{
+	                            FitPolynomial4( &(x[1]), &(y[1]), NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]), &error );
+							}
+						}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[1].pIonFrac )
+                        if( NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[2] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[3] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[4] = RightCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[5] = FarRightCellProperties.pIonFrac->ppGetIonFrac();
-#ifdef LINEAR_RESTRICTION
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
-#else // LINEAR_RESTRICTION
-                            NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
-#endif // LINEAR_RESTRICTION
+							
+                            if(Params.linear_restriction)
+							{
+								NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[2]), &(ppIonFrac[2]), 2, NewCellProperties[1].s[1] );
+                            }
+                            else
+							{
+								NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 4, NewCellProperties[1].s[1] );
+                            }
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
                     }
                     else if( !pFarRightCell )
                     {
-			pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
+						pFarLeftCell->GetCellProperties( &FarLeftCellProperties );
 
-			x[1] = FarLeftCellProperties.s[1];
-			x[2] = LeftCellProperties.s[1];
-			x[3] = CellProperties.s[1];
-			x[4] = RightCellProperties.s[1];
+						x[1] = FarLeftCellProperties.s[1];
+						x[2] = LeftCellProperties.s[1];
+						x[3] = CellProperties.s[1];
+						x[4] = RightCellProperties.s[1];
 
-                        y[1] = FarLeftCellProperties.rho[1];
-			y[2] = LeftCellProperties.rho[1];
-			y[3] = CellProperties.rho[1];
-			y[4] = RightCellProperties.rho[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
-#endif // LINEAR_RESTRICTION
+			            y[1] = FarLeftCellProperties.rho[1];
+						y[2] = LeftCellProperties.rho[1];
+						y[3] = CellProperties.rho[1];
+						y[4] = RightCellProperties.rho[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]), &error );
+						}
 
-			y[1] = FarLeftCellProperties.rho_v[1];
-			y[2] = LeftCellProperties.rho_v[1];
-			y[3] = CellProperties.rho_v[1];
-			y[4] = RightCellProperties.rho_v[1];
-#ifdef LINEAR_RESTRICTION
-			LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
-#else
-			FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
-#endif // LINEAR_RESTRICTION
+						y[1] = FarLeftCellProperties.rho_v[1];
+						y[2] = LeftCellProperties.rho_v[1];
+						y[3] = CellProperties.rho_v[1];
+						y[4] = RightCellProperties.rho_v[1];
+						
+						if(Params.linear_restriction)
+						{
+							LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]) );
+						}
+						else
+						{
+							FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho_v[1]), &error );
+						}
 
-			for( j=0; j<SPECIES; j++ )
-			{
+						for( j=0; j<SPECIES; j++ )
+						{
                             y[1] = FarLeftCellProperties.TE_KE[1][j];
                             y[2] = LeftCellProperties.TE_KE[1][j];
                             y[3] = CellProperties.TE_KE[1][j];
                             y[4] = RightCellProperties.TE_KE[1][j];
-#ifdef LINEAR_RESTRICTION
-                            LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
-#else
-                            FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
-#endif // LINEAR_RESTRICTION
-			}
+							
+							if(Params.linear_restriction)
+                            {
+								LinearFit( &(x[1]), &(y[1]), NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
+                            }
+							else
+                            {
+								FitPolynomial4( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]), &error );
+                            }
+						}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[0].pIonFrac )
+                        if( NewCellProperties[0].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = FarLeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = LeftCellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[3] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[4] = RightCellProperties.pIonFrac->ppGetIonFrac();
-#ifdef LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
-#else // LINEAR_RESTRICTION
-                            NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
-#endif // LINEAR_RESTRICTION
+							
+                            if(Params.linear_restriction)
+							{
+								NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( &(x[1]), &(ppIonFrac[1]), 2, NewCellProperties[0].s[1] );
+                            }
+							else
+                            {
+								NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 4, NewCellProperties[0].s[1] );
+                            }
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
 
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
-
-// RIGHT-HAND BOUNDARY
+						// ******************************************************************************
+						// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+						// ******************************************************************************
+						
+						// RIGHT-HAND BOUNDARY
 
                         // Implement hydrostatic boundary conditions in the right-most of the two new cells
 
                         x[1] = CellProperties.s[1];
-			x[2] = RightCellProperties.s[1];
+						x[2] = RightCellProperties.s[1];
 
                         y[1] = CellProperties.rho[1];
                         y[2] = RightCellProperties.rho[1];
@@ -1180,52 +1261,50 @@ do {
                             LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
                         }
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                        if( NewCellProperties[1].pIonFrac )
+                        if( NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
                         {
                             ppIonFrac[1] = CellProperties.pIonFrac->ppGetIonFrac();
                             ppIonFrac[2] = RightCellProperties.pIonFrac->ppGetIonFrac();
                             NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[1].s[1] );
                         }
-#endif // NON_EQUILIBRIUM_RADIATION
                     }
 		}
 		else
 		{
-                    do {
+            do {
 
-                        NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] = rand();
+                NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] = rand();
 
-                    } while ( NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == LeftCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] );
+            } while ( NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel] == LeftCellProperties.iUniqueID[NewCellProperties[0].iRefinementLevel] );
 
-                    NewCellProperties[1].iUniqueID[NewCellProperties[1].iRefinementLevel] = NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel];
+            NewCellProperties[1].iUniqueID[NewCellProperties[1].iRefinementLevel] = NewCellProperties[0].iUniqueID[NewCellProperties[0].iRefinementLevel];
 
-// ******************************************************************************
-// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
-// ******************************************************************************
+			// ******************************************************************************
+			// *    IMPLEMENT HYDROSTATIC BOUNDARY CONDITIONS                               *
+			// ******************************************************************************
 
-// RIGHT-HAND BOUNDARY
+			// RIGHT-HAND BOUNDARY
                     
-                    // NEW CELLS
+            // NEW CELLS
                     
 		    x[1] = LeftCellProperties.s[1];
 		    x[2] = CellProperties.s[1];
 
-                    y[1] = LeftCellProperties.rho[1];
-                    y[2] = CellProperties.rho[1];
-                    LinearFit( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
-                    LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
+            y[1] = LeftCellProperties.rho[1];
+            y[2] = CellProperties.rho[1];
+            LinearFit( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].rho[1]) );
+            LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].rho[1]) );
 
-                    NewCellProperties[0].rho_v[1] = 0.0;
-                    NewCellProperties[1].rho_v[1] = 0.0;
+            NewCellProperties[0].rho_v[1] = 0.0;
+            NewCellProperties[1].rho_v[1] = 0.0;
 
-                    for( j=0; j<SPECIES; j++ )
-                    {
-                        y[1] = LeftCellProperties.TE_KE[1][j];
-                        y[2] = CellProperties.TE_KE[1][j];
-                        LinearFit( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
-                        LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
-                    }
+            for( j=0; j<SPECIES; j++ )
+            {
+                y[1] = LeftCellProperties.TE_KE[1][j];
+                y[2] = CellProperties.TE_KE[1][j];
+                LinearFit( x, y, NewCellProperties[0].s[1], &(NewCellProperties[0].TE_KE[1][j]) );
+                LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
+            }
 
 #ifdef NON_EQUILIBRIUM_RADIATION
                     if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac )
@@ -1312,7 +1391,6 @@ CountCells();
 CreateIndexedCellList();
 #endif // USE_KINETIC_MODEL
 }
-#endif // ADAPT
 
 void CAdaptiveMesh::Solve( void )
 {
