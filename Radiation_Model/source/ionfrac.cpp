@@ -17,6 +17,7 @@
 #include "config.h"
 #include "../../Resources/source/file.h"
 #include "../../Resources/source/fitpoly.h"
+#include "../../Resources/source/xmlreader.h"
 
 
 CIonFrac::CIonFrac( CIonFrac *pIonFrac, char *szFilename, PRADIATION pRadiationObj )
@@ -42,22 +43,24 @@ pRadiation = pRadiationObj;
 // If pIonFrac is NULL then initialise the ion fractional populations using the configuration file
 if( !pIonFrac )
 {
-    pFile = fopen( szFilename, "r" );
-
-    // Get the range definition filename
-    fscanf( pFile, "%s", buffer );
-
-    // Get the ion emissivities
-    fscanf( pFile, "%s", buffer );
-
-    // Get the abundance set
-    fscanf( pFile, "%s", buffer );
-
-    // Get the ionisation and recombination data
-    fscanf( pFile, "%s", buffer );
-
-    // Get the number of elements from the file
-    fscanf( pFile, "%i", &NumElements );
+    
+	//Parse XML configuration file
+	TiXmlDocument doc(szFilename);
+	
+	//Check if loaded
+	bool loadOK = doc.LoadFile();
+	if(!loadOK)
+	{
+		printf("Failed to load XML configuration file %s.\n",szFilename);
+		//TODO: Exit or break out from here
+	}
+	
+	//Get document root
+	TiXmlElement *root = doc.FirstChildElement();
+	
+	//Read in parameters
+	cutoff_ion_fraction = atof(check_element(recursive_read(root,"cutoff_ion_fraction"),"cutoff_ion_fraction")->GetText());
+	NumElements = atoi(check_element(recursive_read(root,"numElements"),"numElements")->GetText());
 
     // Allocate sufficient memory to hold the pointers to the ionisation fractions and their
     // rates of change with respect to time for each element
@@ -67,16 +70,23 @@ if( !pIonFrac )
 
     // Allocate sufficient memory to hold the list of atomic numbers
     pZ = (int*)malloc( sizeof(int) * NumElements );
-
-    for( i=0; i<NumElements; i++ )
-    {
-        // Get the element symbol
-        fscanf( pFile, "%s", buffer );
 	
-        // Get the atomic number
-        fscanf( pFile, "%i", &(pZ[i]) );
-	
-        // Allocate sufficient memory to hold the ionisation fractions and their rates of
+	//Loop over elements
+	i = 0;
+	TiXmlElement *elementList = check_element(recursive_read(root,"elements"),"elements");
+	for(TiXmlElement *child = elementList->FirstChildElement(); child != NULL; child=child->NextSiblingElement())
+	{
+		//Check counter
+		if(i>=NumElements)
+		{
+			printf("Warning: Element list length > NumElements variable. Some elements may not be read.\n\n");
+			break;
+		}
+		
+		//Get atomic number
+		pZ[i] = atoi(child->Attribute("number"));
+		
+		// Allocate sufficient memory to hold the ionisation fractions and their rates of
         // change with respect to time for each element
         iBytes = sizeof(double) * ( pZ[i] + 1 );
         ppIonFrac[i] = (double*)malloc( iBytes );
@@ -85,15 +95,21 @@ if( !pIonFrac )
         // Zero the arrays containing the rates of change with respect to time of the ionisation
         // fractions
         memset( ppdnibydt[i], 0, iBytes );
-    }
-
-    fclose( pFile );
+		
+		//Increment counter
+		i++;
+	}
+	
+	//Free document tree
+	doc.Clear();
 }
 else
 {
     // Get the element info from the ionfrac object being used to initialise the new
     // ionfrac object
     pAtomicNumber = pIonFrac->pGetElementInfo( &NumElements );
+	//Get ion fraction cutoff property
+	cutoff_ion_fraction = pIonFrac->cutoff_ion_fraction;
 
     // Allocate sufficient memory to hold the pointers to the ionisation fractions and their
     // rates of change with respect to time for each element
@@ -256,7 +272,7 @@ for( i=0; i<NumElements; i++ )
         ppIonFrac[i][j] += ppdnibydt[i][j] * delta_t;
 
 	// Ensure the minimum ion fraction remains above the cut-off and is physically realistic
-        if( ppIonFrac[i][j] < CUTOFF_ION_FRACTION )
+        if( ppIonFrac[i][j] < cutoff_ion_fraction )
             ppIonFrac[i][j] = 0.0;
 
         fTotal += ppIonFrac[i][j];
@@ -283,7 +299,7 @@ for( j=0; j<=pZ[i]; j++ )
     ppIonFrac[i][j] += ppdnibydt[i][j] * delta_t;
 
     // Ensure the minimum ion fraction remains above the cut-off and is physically realistic
-    if( ppIonFrac[i][j] < CUTOFF_ION_FRACTION )
+    if( ppIonFrac[i][j] < cutoff_ion_fraction )
         ppIonFrac[i][j] = 0.0;
 
     fTotal += ppIonFrac[i][j];
