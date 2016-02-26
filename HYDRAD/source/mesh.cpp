@@ -105,8 +105,8 @@ for( i = 0; i < iNumberOfCells; i++ )
 
     // The number of refinement levels in the .amr file MUST match MAX_REFINEMENT_LEVEL
     fscanf( pFile, "%i", &(CellProperties.iRefinementLevel) );
-    for( j=1; j<=MAX_REFINEMENT_LEVEL; j++ )
-	fscanf( pFile, "%i", &(CellProperties.iUniqueID[j]) );
+    for( j=1; j<=Params.max_refinement_level; j++ )
+		fscanf( pFile, "%i", &(CellProperties.iUniqueID[j]) );
 
 	if(Params.non_equilibrium_radiation)
 	{
@@ -456,7 +456,7 @@ do {
 		dTE_KEh = 1.0 - ( min( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) / max( CellProperties.TE_KE[1][HYDROGEN], RightCellProperties.TE_KE[1][HYDROGEN] ) );
 	}
 	
-	if( ( drho > MAX_FRAC_DIFF || dTE_KEe > MAX_FRAC_DIFF || dTE_KEh > MAX_FRAC_DIFF || abs( CellProperties.iRefinementLevel - RightCellProperties.iRefinementLevel ) > 1 ) && ( CellProperties.iRefinementLevel < MAX_REFINEMENT_LEVEL || RightCellProperties.iRefinementLevel < Params.max_refinement_level ) )
+	if( ( drho > Params.max_frac_diff || dTE_KEe > Params.max_frac_diff || dTE_KEh > Params.max_frac_diff || abs( CellProperties.iRefinementLevel - RightCellProperties.iRefinementLevel ) > 1 ) && ( CellProperties.iRefinementLevel < Params.max_refinement_level || RightCellProperties.iRefinementLevel < Params.max_refinement_level ) )
 	{
             iRestricted = TRUE;
 
@@ -1306,44 +1306,43 @@ do {
                 LinearFit( x, y, NewCellProperties[1].s[1], &(NewCellProperties[1].TE_KE[1][j]) );
             }
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                    if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac )
-                    {
-                        ppIonFrac[1] = LeftCellProperties.pIonFrac->ppGetIonFrac();
-                        ppIonFrac[2] = CellProperties.pIonFrac->ppGetIonFrac();
-                        NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[0].s[1] );
-                        NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[1].s[1] );
-                    }
-#endif // NON_EQUILIBRIUM_RADIATION
+            if( NewCellProperties[0].pIonFrac && NewCellProperties[1].pIonFrac && Params.non_equilibrium_radiation)
+            {
+                ppIonFrac[1] = LeftCellProperties.pIonFrac->ppGetIonFrac();
+                ppIonFrac[2] = CellProperties.pIonFrac->ppGetIonFrac();
+                NewCellProperties[0].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[0].s[1] );
+                NewCellProperties[1].pIonFrac->InterpolateAllIonFrac( x, ppIonFrac, 2, NewCellProperties[1].s[1] );
+            }
 		}
 
-// ******************************************************************************
-// *    ENSURE MASS AND ENERGY IS CONSERVED BY THE RESTRICTION OPERATOR         *
-// ******************************************************************************
-#ifdef ENFORCE_CONSERVATION
-		// A correction is applied to the mass and energy densities in the event that the sum of the integrated quantities in the new cells does not equal the integrated quantity in the original cell
-
-		fWeight = ( 2.0 * CellProperties.rho[1] ) / ( NewCellProperties[0].rho[1] + NewCellProperties[1].rho[1] );
-		NewCellProperties[0].rho[1] *= fWeight;
-		NewCellProperties[1].rho[1] *= fWeight;
-
-		if( NewCellProperties[0].rho_v[1] || NewCellProperties[1].rho_v[1] )
+		// ******************************************************************************
+		// *    ENSURE MASS AND ENERGY IS CONSERVED BY THE RESTRICTION OPERATOR         *
+		// ******************************************************************************
+		if(Params.enforce_conservation)
 		{
-                    temp1 = ( 2.0 * CellProperties.rho_v[1] ) - ( NewCellProperties[0].rho_v[1] + NewCellProperties[1].rho_v[1] );
-                    temp2 = fabs( NewCellProperties[0].rho_v[1] );
-                    temp3 = fabs( NewCellProperties[1].rho_v[1] );
-                    temp4 = temp1 / ( temp2 + temp3 );
-                    NewCellProperties[0].rho_v[1] += ( temp2 * temp4 );
-                    NewCellProperties[1].rho_v[1] += ( temp3 * temp4 );
-		}
+			// A correction is applied to the mass and energy densities in the event that the sum of the integrated quantities in the new cells does not equal the integrated quantity in the original cell
 
-		for( j=0; j<SPECIES; j++ )
-		{
-		    fWeight = ( 2.0 * CellProperties.TE_KE[1][j] ) / ( NewCellProperties[0].TE_KE[1][j] + NewCellProperties[1].TE_KE[1][j] );
-		    NewCellProperties[0].TE_KE[1][j] *= fWeight;
-		    NewCellProperties[1].TE_KE[1][j] *= fWeight;
+			fWeight = ( 2.0 * CellProperties.rho[1] ) / ( NewCellProperties[0].rho[1] + NewCellProperties[1].rho[1] );
+			NewCellProperties[0].rho[1] *= fWeight;
+			NewCellProperties[1].rho[1] *= fWeight;
+
+			if( NewCellProperties[0].rho_v[1] || NewCellProperties[1].rho_v[1] )
+			{
+                temp1 = ( 2.0 * CellProperties.rho_v[1] ) - ( NewCellProperties[0].rho_v[1] + NewCellProperties[1].rho_v[1] );
+                temp2 = fabs( NewCellProperties[0].rho_v[1] );
+                temp3 = fabs( NewCellProperties[1].rho_v[1] );
+                temp4 = temp1 / ( temp2 + temp3 );
+                NewCellProperties[0].rho_v[1] += ( temp2 * temp4 );
+                NewCellProperties[1].rho_v[1] += ( temp3 * temp4 );
+			}
+
+			for( j=0; j<SPECIES; j++ )
+			{
+			    fWeight = ( 2.0 * CellProperties.TE_KE[1][j] ) / ( NewCellProperties[0].TE_KE[1][j] + NewCellProperties[1].TE_KE[1][j] );
+			    NewCellProperties[0].TE_KE[1][j] *= fWeight;
+			    NewCellProperties[1].TE_KE[1][j] *= fWeight;
+			}
 		}
-#endif // ENFORCE_CONSERVATION
 
 		pNewCell[0] = new CAdaptiveMeshCell( &(NewCellProperties[0]) );
 		pNewCell[1] = new CAdaptiveMeshCell( &(NewCellProperties[1]) );
@@ -1356,22 +1355,23 @@ do {
 			
 		if( pRightCell )
 		{
-                    pNewCell[1]->SetPointer( RIGHT, pRightCell );
-                    pRightCell->SetPointer( LEFT, pNewCell[1] );
+            pNewCell[1]->SetPointer( RIGHT, pRightCell );
+            pRightCell->SetPointer( LEFT, pNewCell[1] );
 		}
 		else
 		{
-                    pNewCell[1]->SetPointer( RIGHT, NULL );
+            pNewCell[1]->SetPointer( RIGHT, NULL );
 		}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-                if( CellProperties.pIonFrac )
-                    delete CellProperties.pIonFrac;
-#endif // NON_EQUILIBRIUM_RADIATION
+        if( CellProperties.pIonFrac && Params.non_equilibrium_radiation)
+        {
+        	delete CellProperties.pIonFrac;
+        }
 
-#ifdef USE_KINETIC_MODEL
-		delete CellProperties.pKinetic;
-#endif // USE_KINETIC_MODEL
+		if(Params.use_kinetic_model)
+		{
+			delete CellProperties.pKinetic;
+		}
 
 		delete pActiveCell;
 
@@ -1386,10 +1386,11 @@ do {
 
 } while( iRestricted );
 
-#ifdef USE_KINETIC_MODEL
-CountCells();
-CreateIndexedCellList();
-#endif // USE_KINETIC_MODEL
+if(Params.use_kinetic_model)
+{
+	CountCells();
+	CreateIndexedCellList();
+}
 }
 
 void CAdaptiveMesh::Solve( void )
@@ -1407,10 +1408,10 @@ while( mesh_time <= Params.Duration )
 {
     iOutputStepCount++;
 
-    if( iOutputStepCount == OUTPUT_EVERY_N_TIME_STEPS )
+    if( iOutputStepCount == Params.output_every_n_time_steps )
     {
         printf( "Timestep = %.8e seconds : Time elapsed = %.4e seconds\n", mesh_delta_t, mesh_time );
-	iOutputStepCount = 0;
+		iOutputStepCount = 0;
     }
 
     Integrate();
@@ -1419,7 +1420,7 @@ while( mesh_time <= Params.Duration )
     if( mesh_time >= fNextOutputTime )
     {
         WriteToFile();
-	fNextOutputTime += Params.OutputPeriod;
+		fNextOutputTime += Params.OutputPeriod;
     }
 }
 
@@ -1432,9 +1433,10 @@ PCELL pNextActiveCell, pPreviousCell = NULL, pNewCell;
 CELLPROPERTIES CellProperties, NewCellProperties;
 double delta_t;
 
-#ifdef USE_KINETIC_MODEL
-int iCell = 0;
-#endif // USE_KINETIC_MODEL
+if(Params.use_kinetic_model)
+{
+	int iCell = 0;
+}
 
 // The integration is 2nd order in time and uses the derivatives calculated at half the time-step
 delta_t = 0.5 * mesh_delta_t;
@@ -1446,14 +1448,16 @@ while( pNextActiveCell )
     pActiveCell = pNextActiveCell;
     pActiveCell->GetCellProperties( &NewCellProperties );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    // Create a new ionfrac object for the new cell
-    NewCellProperties.pIonFrac = new CIonFrac( NewCellProperties.pIonFrac, 0, pRadiation );
-#endif // NON_EQUILIBRIUM_RADIATION
+	if(Params.non_equilibrium_radiation)
+    {
+	    // Create a new ionfrac object for the new cell
+	    NewCellProperties.pIonFrac = new CIonFrac( NewCellProperties.pIonFrac, 0, pRadiation );
+    }
 
-#ifdef USE_KINETIC_MODEL
-    NewCellProperties.pKinetic = new CKinetic();
-#endif // USE_KINETIC_MODEL
+	if(Params.use_kinetic_model)
+    {
+		NewCellProperties.pKinetic = new CKinetic();
+    }
 
     Half_Time_Step( &NewCellProperties, delta_t );
 
@@ -1471,26 +1475,27 @@ while( pNextActiveCell )
     {
         pNewCell->SetPointer( LEFT, NULL );
 	
-	// Also, set the pointer to the left-most cell at the current time to this pointer and change
-	// the pointer to the start of the previous row accordingly
-	pStartOfPreviousRow = pStartOfCurrentRow;
-	pStartOfCurrentRow = pNewCell;
+		// Also, set the pointer to the left-most cell at the current time to this pointer and change
+		// the pointer to the start of the previous row accordingly
+		pStartOfPreviousRow = pStartOfCurrentRow;
+		pStartOfCurrentRow = pNewCell;
     }
     // This cell is not the left-most and so it will have a LEFT pointer
     else
     {
         // Set the RIGHT pointer of the previous cell to the new cell
-	pPreviousCell->SetPointer( RIGHT, pNewCell );
-	pNewCell->SetPointer( LEFT, pPreviousCell );
+		pPreviousCell->SetPointer( RIGHT, pNewCell );
+		pNewCell->SetPointer( LEFT, pPreviousCell );
     }
 
     pPreviousCell = pNewCell;
     pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 
-#ifdef USE_KINETIC_MODEL
-    ppCellList[iCell] = pNewCell;
-    iCell++;
-#endif // USE_KINETIC_MODEL
+	if(Params.use_kinetic_model)
+    {
+	    ppCellList[iCell] = pNewCell;
+	    iCell++;
+    }
 }
 
 // Calculate the physical quantities in the new cells
@@ -1513,10 +1518,11 @@ while( pNextActiveCell )
     pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 }
 
-#ifdef ADAPT
-// Adapt the mesh
-Adapt();
-#endif // ADAPT
+if(Params.adapt)
+{
+	// Adapt the mesh
+	Adapt();
+}
 
 // Calculate the physical quantities
 CalculatePhysicalQuantities();
@@ -1527,8 +1533,10 @@ EvaluateTerms( mesh_time + mesh_delta_t, &delta_t, TRUE );
 // Limit time-step increases to be within a specified fractional amount of the previous time-step
 if( delta_t > mesh_delta_t )
 {
-    if( delta_t / mesh_delta_t > TIME_STEP_INCREASE_LIMIT )
-        delta_t = TIME_STEP_INCREASE_LIMIT * mesh_delta_t;
+    if( delta_t / mesh_delta_t > Params.time_step_increase_limit )
+    {
+    	delta_t = Params.time_step_increase_limit * mesh_delta_t;
+    }
 }
 
 // The mesh has been time-stepped
@@ -1555,13 +1563,15 @@ while( pNextActiveCell )
     pActiveCell->GetCellProperties( &CellProperties );
     pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    delete CellProperties.pIonFrac;
-#endif // NON_EQUILIBRIUM_RADIATION
+	if(Params.non_equilibrium_radiation)
+    {
+    	delete CellProperties.pIonFrac;
+    }
 
-#ifdef USE_KINETIC_MODEL
-    delete CellProperties.pKinetic;
-#endif // USE_KINETIC_MODEL
+	if(Params.use_kinetic_model)
+    {
+		delete CellProperties.pKinetic;
+    }
 
     delete pActiveCell;
 }
@@ -1581,13 +1591,15 @@ while( pNextActiveCell )
     pActiveCell->GetCellProperties( &CellProperties );
     pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-    delete CellProperties.pIonFrac;
-#endif // NON_EQUILIBRIUM_RADIATION
+	if(Params.non_equilibrium_radiation)
+    {
+		delete CellProperties.pIonFrac;
+    }
 
-#ifdef USE_KINETIC_MODEL
-    delete CellProperties.pKinetic;
-#endif // USE_KINETIC_MODEL
+	if(Params.use_kinetic_model)
+    {
+		delete CellProperties.pKinetic;
+    }
 
     delete pActiveCell;
 }
@@ -1598,36 +1610,38 @@ void CAdaptiveMesh::WriteToFile( void )
 FILE *pAMRFile;
 char szAMRFilename[256];
 
-#ifdef WRITE_FILE_PHYSICAL
-FILE *pPhysicalFile;
-char szPhysicalFilename[256];
-sprintf( szPhysicalFilename, "Results/profile%i.phy", iFileNumber );
-pPhysicalFile = fopen( szPhysicalFilename, "w" );
-#endif // WRITE_FILE_PHYSICAL
+if(Params.write_file_physical)
+{
+	FILE *pPhysicalFile;
+	char szPhysicalFilename[256];
+	sprintf( szPhysicalFilename, "%sprofile%i.phy", Params.output_dir, iFileNumber );
+	pPhysicalFile = fopen( szPhysicalFilename, "w" );
+}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-#ifdef WRITE_FILE_ION_POPULATIONS
-FILE *pNEqIonFile;
-char szNEqIonFilename[256];
-sprintf( szNEqIonFilename, "Results/profile%i.ine", iFileNumber );
-pNEqIonFile = fopen( szNEqIonFilename, "w" );
-#endif // WRITE_FILE_ION_POPULATIONS
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation && Params.write_file_ion_populations)
+{
+	FILE *pNEqIonFile;
+	char szNEqIonFilename[256];
+	sprintf( szNEqIonFilename, "%sprofile%i.ine", Params.output_dir, iFileNumber );
+	pNEqIonFile = fopen( szNEqIonFilename, "w" );
+}
 
-#ifdef WRITE_FILE_SCALES
-FILE *pScaleFile;
-char szScaleFilename[256];
-sprintf( szScaleFilename, "Results/profile%i.scl", iFileNumber );
-pScaleFile = fopen( szScaleFilename, "w" );
-#endif // WRITE_FILE_SCALES
+if(Params.write_file_scales)
+{
+	FILE *pScaleFile;
+	char szScaleFilename[256];
+	sprintf( szScaleFilename, "%sprofile%i.scl", Params.output_dir, iFileNumber );
+	pScaleFile = fopen( szScaleFilename, "w" );
+}
 
-#ifdef WRITE_FILE_TERMS
-FILE *pTermsFile;
-char szTermsFilename[256];
-int iTerm;
-sprintf( szTermsFilename, "Results/profile%i.trm", iFileNumber );
-pTermsFile = fopen( szTermsFilename, "w" );
-#endif // WRITE_FILE_TERMS
+if(Params.write_file_terms)
+{
+	FILE *pTermsFile;
+	char szTermsFilename[256];
+	int iTerm;
+	sprintf( szTermsFilename, "%sprofile%i.trm", Params.output_dir, iFileNumber );
+	pTermsFile = fopen( szTermsFilename, "w" );
+}
 
 PCELL pNextActiveCell;
 CELLPROPERTIES CellProperties;
@@ -1645,95 +1659,102 @@ while( pNextActiveCell )
     pActiveCell = pNextActiveCell;
     pActiveCell->GetCellProperties( &CellProperties );
 
-#ifdef WRITE_FILE_PHYSICAL
-    fprintf( pPhysicalFile, "%.8e\t%.8e\t%.8e", CellProperties.s[1], CellProperties.v[1], CellProperties.Cs );
-
-    for( j=0; j<SPECIES; j++ )
-        fprintf( pPhysicalFile, "\t%.8e", CellProperties.n[j] );
-
-    for( j=0; j<SPECIES; j++ )
-        fprintf( pPhysicalFile, "\t%.8e", CellProperties.P[1][j] );
-
-    for( j=0; j<SPECIES; j++ )
-        fprintf( pPhysicalFile, "\t%.8e", CellProperties.T[j] );
-
-    for( j=0; j<SPECIES; j++ )
-        fprintf( pPhysicalFile, "\t%.8e", CellProperties.Fc[1][j] );
-
-    fprintf( pPhysicalFile, "\n" );
-#endif // WRITE_FILE_PHYSICAL
-
-#ifdef NON_EQUILIBRIUM_RADIATION
-#ifdef WRITE_FILE_ION_POPULATIONS
-    fprintf( pNEqIonFile, "%.8e", CellProperties.s[1] );
-    CellProperties.pIonFrac->WriteAllIonFracToFile( pNEqIonFile );
-#endif // WRITE_FILE_ION_POPULATIONS
-#endif // NON_EQUILIBRIUM_RADIATION
-
-#ifdef WRITE_FILE_SCALES
-    fprintf( pScaleFile, "%.8e\t%.8e\t%.8e", CellProperties.s[1], CellProperties.cell_width, CellProperties.advection_delta_t );
-
-    for( j=0; j<SPECIES; j++ )
-        fprintf( pScaleFile, "\t%.8e", CellProperties.conduction_delta_t[j] );
-
-    fprintf( pScaleFile, "\t%.8e", CellProperties.viscosity_delta_t );
-    fprintf( pScaleFile, "\t%.8e", CellProperties.collision_delta_t );
-    fprintf( pScaleFile, "\t%.8e", CellProperties.radiation_delta_t );
-#ifdef NON_EQUILIBRIUM_RADIATION
-    fprintf( pScaleFile, "\t%.8e", CellProperties.atomic_delta_t );
-#endif // NON_EQUILIBRIUM_RADIATION
-    fprintf( pScaleFile, "\n" );
-#endif // WRITE_FILE_SCALES
-
-#ifdef WRITE_FILE_TERMS
-    fprintf( pTermsFile, "%.8e\n", CellProperties.s[1] );
-
-    fprintf( pTermsFile, "%.8e", CellProperties.drhobydt );
-    for( iTerm=0; iTerm<MASS_TERMS; iTerm++ )
-        fprintf( pTermsFile, "\t%.8e", CellProperties.rho_term[iTerm] );
-
-    fprintf( pTermsFile, "\n" );
-
-    fprintf( pTermsFile, "%.8e", CellProperties.drho_vbydt );
-    for( iTerm=0; iTerm<MOMENTUM_TERMS; iTerm++ )
-        fprintf( pTermsFile, "\t%.8e", CellProperties.rho_v_term[iTerm] );
-
-    fprintf( pTermsFile, "\n" );
-
-    for( j=0; j<SPECIES; j++ )
+	if(Params.write_file_physical)
     {
-        fprintf( pTermsFile, "%.8e", CellProperties.dTE_KEbydt[j] );
-	for( iTerm=0; iTerm<ENERGY_TERMS; iTerm++ )
-            fprintf( pTermsFile, "\t%.8e", CellProperties.TE_KE_term[iTerm][j] );
+	    fprintf( pPhysicalFile, "%.8e\t%.8e\t%.8e", CellProperties.s[1], CellProperties.v[1], CellProperties.Cs );
 
-	fprintf( pTermsFile, "\n" );
+	    for( j=0; j<SPECIES; j++ )
+	        fprintf( pPhysicalFile, "\t%.8e", CellProperties.n[j] );
+
+	    for( j=0; j<SPECIES; j++ )
+	        fprintf( pPhysicalFile, "\t%.8e", CellProperties.P[1][j] );
+
+	    for( j=0; j<SPECIES; j++ )
+	        fprintf( pPhysicalFile, "\t%.8e", CellProperties.T[j] );
+
+	    for( j=0; j<SPECIES; j++ )
+	        fprintf( pPhysicalFile, "\t%.8e", CellProperties.Fc[1][j] );
+
+	    fprintf( pPhysicalFile, "\n" );
     }
-#endif // WRITE_FILE_TERMS
+
+    if(Params.non_equilibrium_radiation && Params.write_file_ion_populations)
+	{
+	    fprintf( pNEqIonFile, "%.8e", CellProperties.s[1] );
+	    CellProperties.pIonFrac->WriteAllIonFracToFile( pNEqIonFile );
+    }
+
+	if(Params.write_file_scales)
+    {
+	    fprintf( pScaleFile, "%.8e\t%.8e\t%.8e", CellProperties.s[1], CellProperties.cell_width, CellProperties.advection_delta_t );
+
+	    for( j=0; j<SPECIES; j++ )
+	        fprintf( pScaleFile, "\t%.8e", CellProperties.conduction_delta_t[j] );
+
+	    fprintf( pScaleFile, "\t%.8e", CellProperties.viscosity_delta_t );
+	    fprintf( pScaleFile, "\t%.8e", CellProperties.collision_delta_t );
+	    fprintf( pScaleFile, "\t%.8e", CellProperties.radiation_delta_t );
+		
+		if(Params.non_equilibrium_radiation)
+		{
+		    fprintf( pScaleFile, "\t%.8e", CellProperties.atomic_delta_t );
+		}
+	    
+		fprintf( pScaleFile, "\n" );
+    }
+
+	if(Params.write_file_terms)
+	{
+	    fprintf( pTermsFile, "%.8e\n", CellProperties.s[1] );
+
+	    fprintf( pTermsFile, "%.8e", CellProperties.drhobydt );
+	    for( iTerm=0; iTerm<MASS_TERMS; iTerm++ )
+	        fprintf( pTermsFile, "\t%.8e", CellProperties.rho_term[iTerm] );
+
+	    fprintf( pTermsFile, "\n" );
+
+	    fprintf( pTermsFile, "%.8e", CellProperties.drho_vbydt );
+	    for( iTerm=0; iTerm<MOMENTUM_TERMS; iTerm++ )
+	        fprintf( pTermsFile, "\t%.8e", CellProperties.rho_v_term[iTerm] );
+
+	    fprintf( pTermsFile, "\n" );
+
+	    for( j=0; j<SPECIES; j++ )
+	    {
+	        fprintf( pTermsFile, "%.8e", CellProperties.dTE_KEbydt[j] );
+			for( iTerm=0; iTerm<ENERGY_TERMS; iTerm++ )
+	            fprintf( pTermsFile, "\t%.8e", CellProperties.TE_KE_term[iTerm][j] );
+
+			fprintf( pTermsFile, "\n" );
+	    }
+	}
 
     pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
 }
 
-#ifdef WRITE_FILE_PHYSICAL
-fclose( pPhysicalFile );
-#endif // WRITE_FILE_PHYSICAL
+if(Params.write_file_physical)
+{
+	fclose( pPhysicalFile );
+}
 
-#ifdef NON_EQUILIBRIUM_RADIATION
-#ifdef WRITE_FILE_ION_POPULATIONS
-fclose( pNEqIonFile );
-#endif // WRITE_FILE_ION_POPULATIONS
-#endif // NON_EQUILIBRIUM_RADIATION
+if(Params.non_equilibrium_radiation && Params.write_file_ion_populations)
+{
+	fclose( pNEqIonFile );
+}
 
-#ifdef WRITE_FILE_SCALES
-fclose( pScaleFile );
-#endif // WRITE_FILE_SCALES
+if(Params.write_file_scales)
+{
+	fclose( pScaleFile );
+}
 
-#ifdef WRITE_FILE_TERMS
-fclose( pTermsFile );
-#endif // WRITE_FILE_TERMS
+if(Params.write_file_terms)
+{
+	fclose( pTermsFile );
+}
 
 // Create the .amr file so that the simulation can be continued from the current output if necessary
 
-sprintf( szAMRFilename, "Results/profile%i.amr", iFileNumber );
+sprintf( szAMRFilename, "%sprofile%i.amr", Params.output_dir, iFileNumber );
 
 pAMRFile = fopen( szAMRFilename, "w" );
 
@@ -1751,7 +1772,7 @@ while( pNextActiveCell )
         fprintf( pAMRFile, "\t%.16e", CellProperties.TE_KE[1][j] );
 
     fprintf( pAMRFile, "\t%i", CellProperties.iRefinementLevel );
-    for( j=1; j<=MAX_REFINEMENT_LEVEL; j++ )
+    for( j=1; j<=Params.max_refinement_level; j++ )
         fprintf( pAMRFile, "\t%i", CellProperties.iUniqueID[j] );
 
     fprintf( pAMRFile, "\n" );
@@ -1761,83 +1782,84 @@ while( pNextActiveCell )
 
 fclose( pAMRFile );
 
-#ifdef USE_KINETIC_MODEL
-FILE *pDFNFile;
-char szDFNFilename[256];
-double *pupsilon, *pMaxDFN_ee, *pNonMaxDFN;
-
-// Write the distribution functions to a file
-sprintf( szDFNFilename, "Results/profile%i.dfn", iFileNumber );
-
-pDFNFile = fopen( szDFNFilename, "w" );
-
-pNextActiveCell = pStartOfCurrentRow;
-
-while( pNextActiveCell )
+if(Params.use_kinetic_model)
 {
-    pActiveCell = pNextActiveCell;
-    pActiveCell->GetCellProperties( &CellProperties );
+	FILE *pDFNFile;
+	char szDFNFilename[256];
+	double *pupsilon, *pMaxDFN_ee, *pNonMaxDFN;
 
-    // Write the grid cell locations along the top row of the file
-    fprintf( pDFNFile, "%.8e\t", CellProperties.s[1] );
+	// Write the distribution functions to a file
+	sprintf( szDFNFilename, "%sprofile%i.dfn", Params.output_dir, iFileNumber );
 
-    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	pDFNFile = fopen( szDFNFilename, "w" );
+
+	pNextActiveCell = pStartOfCurrentRow;
+
+	while( pNextActiveCell )
+	{
+	    pActiveCell = pNextActiveCell;
+	    pActiveCell->GetCellProperties( &CellProperties );
+
+	    // Write the grid cell locations along the top row of the file
+	    fprintf( pDFNFile, "%.8e\t", CellProperties.s[1] );
+
+	    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	}
+
+	// Write the thermal speeds along the next row of the file
+	pNextActiveCell = pStartOfCurrentRow;
+	pActiveCell = pNextActiveCell;
+	pActiveCell->GetCellProperties( &CellProperties );
+	pupsilon = CellProperties.pKinetic->Get_pupsilon();
+	fprintf( pDFNFile, "\n" );
+	for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
+	    fprintf( pDFNFile, "%.8e\t", pupsilon[j] );
+
+	pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
+	fprintf( pDFNFile, "\n" );
+	for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
+	    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
+
+	pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	pActiveCell = pNextActiveCell;
+	pActiveCell->GetCellProperties( &CellProperties );
+	pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
+	fprintf( pDFNFile, "\n" );
+	for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
+	    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
+
+	pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
+	{
+	    pActiveCell = pNextActiveCell;
+	    pActiveCell->GetCellProperties( &CellProperties );
+		
+	    pNonMaxDFN = CellProperties.pKinetic->Get_pNonMaxDFN();
+
+	    fprintf( pDFNFile, "\n" );
+	    for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
+	        fprintf( pDFNFile, "%.8e\t", log10( pNonMaxDFN[j] ) );
+
+	    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	}
+
+	pActiveCell = pNextActiveCell;
+	pActiveCell->GetCellProperties( &CellProperties );
+	pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
+	fprintf( pDFNFile, "\n" );
+	for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
+	    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
+
+	pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
+	pActiveCell = pNextActiveCell;
+	pActiveCell->GetCellProperties( &CellProperties );
+	pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
+	fprintf( pDFNFile, "\n" );
+	for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
+	    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
+
+	fclose( pDFNFile );
 }
-
-// Write the thermal speeds along the next row of the file
-pNextActiveCell = pStartOfCurrentRow;
-pActiveCell = pNextActiveCell;
-pActiveCell->GetCellProperties( &CellProperties );
-pupsilon = CellProperties.pKinetic->Get_pupsilon();
-fprintf( pDFNFile, "\n" );
-for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
-    fprintf( pDFNFile, "%.8e\t", pupsilon[j] );
-
-pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
-fprintf( pDFNFile, "\n" );
-for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
-    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
-
-pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
-pActiveCell = pNextActiveCell;
-pActiveCell->GetCellProperties( &CellProperties );
-pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
-fprintf( pDFNFile, "\n" );
-for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
-    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
-
-pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
-while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
-{
-    pActiveCell = pNextActiveCell;
-    pActiveCell->GetCellProperties( &CellProperties );
-	
-    pNonMaxDFN = CellProperties.pKinetic->Get_pNonMaxDFN();
-
-    fprintf( pDFNFile, "\n" );
-    for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
-        fprintf( pDFNFile, "%.8e\t", log10( pNonMaxDFN[j] ) );
-
-    pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
-}
-
-pActiveCell = pNextActiveCell;
-pActiveCell->GetCellProperties( &CellProperties );
-pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
-fprintf( pDFNFile, "\n" );
-for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
-    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
-
-pNextActiveCell = pActiveCell->pGetPointer( RIGHT );
-pActiveCell = pNextActiveCell;
-pActiveCell->GetCellProperties( &CellProperties );
-pMaxDFN_ee = CellProperties.pKinetic->Get_pMaxDFN_ee();
-fprintf( pDFNFile, "\n" );
-for( j=0; j<DISTRIBUTION_DATA_POINTS; j++ )
-    fprintf( pDFNFile, "%.8e\t", log10( pMaxDFN_ee[j] ) );
-
-fclose( pDFNFile );
-#endif // USE_KINETIC_MODEL
 
 iFileNumber++;
 }
