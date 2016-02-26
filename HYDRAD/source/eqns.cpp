@@ -319,7 +319,7 @@ while( pNextActiveCell )
 
 	if(Params.force_single_fluid)
     {
-    	CellProperties.nu_ie = 1.0 / Params.minimum_collisional_coupling_time_scale;
+    	CellProperties.nu_ie = 1.0 / Params.minimum_collisional_coupling_timescale;
     }
 	else
     {
@@ -759,7 +759,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 // *    VISCOUS FLUX TRANSPORT ALGORITHM                                        *
 // ******************************************************************************
 
-	if(Parmas.use_kinetic_model)
+	if(Params.use_kinetic_model)
 	{
 		j = ELECTRON;
 		y[1] = FarLeftCellProperties.T[j];
@@ -1058,8 +1058,8 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
     // Set the collisional timescale to 1% of the timescale for order of magnitude changes in the electron energy due to collisional energy exchange
     CellProperties.collision_delta_t = ( 0.01 * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[3][ELECTRON] );
     // If the collisional timescale is less than the minimum specified collisional timescale then scale the rate of energy exchange so that tiny timesteps can be avoided
-    if( CellProperties.collision_delta_t < Params.minimum_collisional_coupling_time_scale )
-        CellProperties.TE_KE_term[3][ELECTRON] *= CellProperties.collision_delta_t / Params.minimum_collisional_coupling_time_scale;
+    if( CellProperties.collision_delta_t < Params.minimum_collisional_coupling_timescale )
+        CellProperties.TE_KE_term[3][ELECTRON] *= CellProperties.collision_delta_t / Params.minimum_collisional_coupling_timescale;
 
     CellProperties.TE_KE_term[3][HYDROGEN] = - CellProperties.TE_KE_term[3][ELECTRON];
 
