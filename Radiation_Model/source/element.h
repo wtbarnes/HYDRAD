@@ -32,7 +32,7 @@ class CElement {
 	
 	// Configuration variables originally pulled from config.h
 	bool density_dependent_rates;
-	double minimum_collisional_coupling_time_scale, safety_atomic, cutoff_ion_fraction, epsilon_d, epsilon_r;
+	double minimum_collisional_coupling_timescale, safety_atomic, cutoff_ion_fraction, epsilon_d, epsilon_r;
 		
     // Pointer to an array of pointers, each pointing to the emissivity
     // data for an individual ion held in a NumTemp * NumDen size array

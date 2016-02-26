@@ -54,7 +54,7 @@ void CElement::SetConfigVars(TiXmlElement *root)
 {
 	//Set all config variables needed in the CElement class
 	density_dependent_rates = string2bool(check_element(recursive_read(root,"density_dependent_rates"),"density_dependent_rates")->GetText());
-	minimum_collisional_coupling_time_scale = atof(check_element(recursive_read(root,"minimum_collisional_coupling_time_scale"),"minimum_collisional_coupling_time_scale")->GetText());
+	minimum_collisional_coupling_timescale = atof(check_element(recursive_read(root,"minimum_collisional_coupling_timescale"),"minimum_collisional_coupling_timescale")->GetText());
 	safety_atomic = atof(check_element(recursive_read(root,"safety_atomic"),"safety_atomic")->GetText());
 	cutoff_ion_fraction = atof(check_element(recursive_read(root,"cutoff_ion_fraction"),"cutoff_ion_fraction")->GetText());
 	epsilon_d = atof(check_element(recursive_read(root,"epsilon_d"),"epsilon_d")->GetText());
@@ -1215,7 +1215,7 @@ for( iIndex=0; iIndex<=Z; iIndex++ )
 
         TimeScale = min( delta_t1, delta_t2 );
 
-        if( TimeScale < minimum_collisional_coupling_time_scale )
+        if( TimeScale < minimum_collisional_coupling_timescale )
         {
 			if(density_dependent_rates)
 			{
