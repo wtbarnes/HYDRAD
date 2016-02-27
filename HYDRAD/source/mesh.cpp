@@ -31,8 +31,8 @@ CAdaptiveMesh::CAdaptiveMesh( char *configFilename, char *rad_config_eqFilename,
 	// Create the initial mesh given the steady-state profiles
 	CreateInitialMesh();
 
-// Solve the equations
-Solve();
+	// Solve the equations
+	Solve();
 }
 
 // Destructor
@@ -1602,24 +1602,36 @@ char szAMRFilename[256];
 //Variables for write file physical
 FILE *pPhysicalFile;
 char szPhysicalFilename[256];
-sprintf( szPhysicalFilename, "%sprofile%i.phy", Params.output_dir, iFileNumber );
-pPhysicalFile = fopen( szPhysicalFilename, "w" );
+if(Params.write_file_physical)
+{
+	sprintf( szPhysicalFilename, "%sprofile%i.phy", Params.output_dir, iFileNumber );
+	pPhysicalFile = fopen( szPhysicalFilename, "w" );
+}
 //Variables for non-equilibrium radiation and write file ion populations
 FILE *pNEqIonFile;
 char szNEqIonFilename[256];
-sprintf( szNEqIonFilename, "%sprofile%i.ine", Params.output_dir, iFileNumber );
-pNEqIonFile = fopen( szNEqIonFilename, "w" );
+if(Params.non_equilibrium_radiation && Params.write_file_ion_populations)
+{
+	sprintf( szNEqIonFilename, "%sprofile%i.ine", Params.output_dir, iFileNumber );
+	pNEqIonFile = fopen( szNEqIonFilename, "w" );
+}
 //Variables for write file scales
 FILE *pScaleFile;
 char szScaleFilename[256];
-sprintf( szScaleFilename, "%sprofile%i.scl", Params.output_dir, iFileNumber );
-pScaleFile = fopen( szScaleFilename, "w" );
+if(Params.write_file_scales)
+{
+	sprintf( szScaleFilename, "%sprofile%i.scl", Params.output_dir, iFileNumber );
+	pScaleFile = fopen( szScaleFilename, "w" );
+}
 //Variables for write file terms
 FILE *pTermsFile;
 char szTermsFilename[256];
 int iTerm;
-sprintf( szTermsFilename, "%sprofile%i.trm", Params.output_dir, iFileNumber );
-pTermsFile = fopen( szTermsFilename, "w" );
+if(Params.write_file_terms)
+{
+	sprintf( szTermsFilename, "%sprofile%i.trm", Params.output_dir, iFileNumber );
+	pTermsFile = fopen( szTermsFilename, "w" );
+}
 
 PCELL pNextActiveCell;
 CELLPROPERTIES CellProperties;

@@ -9,7 +9,7 @@
 // ****
 
 
-#include "config.h"
+//#include "config.h"
 
 #include "../../Heating_Model/source/heat.h"
 #include "../../Radiation_Model/source/ionfrac.h"
