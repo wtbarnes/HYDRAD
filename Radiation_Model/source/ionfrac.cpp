@@ -32,10 +32,8 @@ FreeAll();
 
 void CIonFrac::Initialise( CIonFrac *pIonFrac, char *szFilename, PRADIATION pRadiationObj )
 {
-FILE *pFile;
 int i, j, iBytes, *pAtomicNumber = NULL;
 double **ppInitIonFrac, **ppInitdnibydt;
-char buffer[16];
 
 // Set the radiation object pointer
 pRadiation = pRadiationObj;
