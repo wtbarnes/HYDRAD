@@ -32,3 +32,5 @@
 
 # Results directories
 */profiles
+# Executable
+*.run

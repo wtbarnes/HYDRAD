@@ -3,10 +3,10 @@
 	<!-- input options -->
 	<ic_profiles>Initial_Conditions/profiles/initial.amr</ic_profiles>
 	<tabulated_gravity_file>Initial_Conditions/profiles/initial.amr.gravity</tabulated_gravity_file>
-	<duration>200.0</duration>
+	<duration>30.0</duration>
 	<!-- output options -->
 	<output_dir>Results/</output_dir>
-	<file_output_period>10</file_output_period>
+	<file_output_period>1</file_output_period>
 	<output_every_n_time_steps>1000</output_every_n_time_steps>
 	<write_file_physical>True</write_file_physical>
 	<write_file_ion_populations>False</write_file_ion_populations>
@@ -15,10 +15,10 @@
 	<!-- physics options -->
 	<heated_species>0</heated_species>
 	<non_equilibrium_radiation>False</non_equilibrium_radiation>
-	<use_power_law_radiative_losses>False</use_power_law_radiative_losses>
+	<use_power_law_radiative_losses>True</use_power_law_radiative_losses>
 	<decouple_ionisation_state_solver>False</decouple_ionisation_state_solver>
 	<density_dependent_rates>False</density_dependent_rates>
-	<optically_thick_radiation>True</optically_thick_radiation>
+	<optically_thick_radiation>False</optically_thick_radiation>
 	<use_kinetic_model>False</use_kinetic_model>
 	<minimum_collisional_coupling_timescale>0.01</minimum_collisional_coupling_timescale>
 	<force_single_fluid>False</force_single_fluid>
@@ -36,13 +36,13 @@
 	<!-- grid options -->
 	<adapt>True</adapt>
 	<max_refinement_level>12</max_refinement_level>
-	<min_frac_diff>0.05</min_frac_diff>
-	<max_frac_diff>0.1</max_frac_diff>
-	<refine_on_density>true</refine_on_density>
-	<refine_on_electron_energy>True</refine_on_electron_energy>
+	<min_frac_diff>0.1</min_frac_diff>
+	<max_frac_diff>0.5</max_frac_diff>
+	<refine_on_density>True</refine_on_density>
+	<refine_on_electron_energy>False</refine_on_electron_energy>
 	<refine_on_hydrogen_energy>False</refine_on_hydrogen_energy>
-	<linear_restriction>False</linear_restriction>
-	<enforce_conservation>True</enforce_conservation>
+	<linear_restriction>True</linear_restriction>
+	<enforce_conservation>False</enforce_conservation>
 	<!-- heating -->
 	<heating>
 		<val_heating_file>/Users/willbarnes/Documents/Rice/Research/apolloDB/OpticallyThick/VAL_atmospheres/VAL.heat</val_heating_file>
@@ -50,10 +50,10 @@
 		<bg_loc>3.0E+9</bg_loc>
 		<bg_spread>1.0E+9</bg_spread>
 		<bg_magnitude>1.0E-3</bg_magnitude>
-		<num_events>2</num_events>
+		<num_events>1</num_events>
 		<events>
-			<event loc="3.0E+9" spread="1.0E+9" magnitude="1.0E-3" rise_start="0.0" rise_end="2.5" decay_start="2.5" decay_end="5" />
-			<event loc="3.0E+9" spread="1.0E+9" magnitude="1.0E-3" rise_start="10." rise_end="12.5" decay_start="12.5" decay_end="15.0" />
+			<event loc="3.0E+9" spread="1.0E+9" magnitude="5.0E-4" rise_start="0.0" rise_end="10.0" decay_start="10.0" decay_end="20.0" />
+			<!-- <event loc="3.0E+9" spread="1.0E+9" magnitude="5.0E-4" rise_start="10." rise_end="12.5" decay_start="12.5" decay_end="15.0" />-->
 		</events>
 	</heating>
 </root>
