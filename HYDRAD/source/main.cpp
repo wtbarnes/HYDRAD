@@ -29,8 +29,8 @@ int main( int argc, char **argv )
 	description.add_options()
 		("help,h","The help message")
 		("config,c",po::value<std::string>()->required(),"HYDRAD configuration file.")
-		("rad_config_eq,r",po::value<std::string>()->required(),"Equilibrium radiation model configuration file.")
-		("rad_config_neq,r",po::value<std::string>()->required(),"Non-equilibrium radiation model configuration file.");
+		("rad_config_eq,e",po::value<std::string>()->required(),"Equilibrium radiation model configuration file.")
+		("rad_config_neq,n",po::value<std::string>()->required(),"Non-equilibrium radiation model configuration file.");
 	po::variables_map vm;
 	po::store(po::command_line_parser(argc,argv).options(description).run(),vm);
 	//Check if the help option is selected

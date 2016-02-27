@@ -26,7 +26,7 @@
 CAdaptiveMesh::CAdaptiveMesh( char *configFilename, char *rad_config_eqFilename, char *rad_config_neqFilename ) : CEquations( configFilename, rad_config_eqFilename, rad_config_neqFilename)
 {
 	//Set member variable(s)
-	radConfigNeqFilename = rad_config_neqFilename;
+	sprintf(radConfigNeqFilename,"%s",rad_config_neqFilename);
 	
 	// Create the initial mesh given the steady-state profiles
 	CreateInitialMesh();
@@ -56,13 +56,12 @@ int iNumberOfCells, i, j;
 
 printf( "\nProcessing the initial conditions...\n" );
 
-if(Params.non_equilibrium_radiation)
-{
-	PCELL pNextActiveCell;
-	FILE *pIonFile = NULL;
-	char szIonFilename[32];
-	double fTemp;
-}
+//Variables non-equilibrium radiation 
+PCELL pNextActiveCell;
+FILE *pIonFile = NULL;
+char szIonFilename[32];
+double fTemp;
+
 
 // ******************************************************************************
 // *                                                                            *
@@ -247,16 +246,10 @@ PCELL pNextActiveCell, pFarLeftCell, pLeftCell, pRightCell, pFarRightCell, pNewC
 CELLPROPERTIES FarLeftCellProperties, LeftCellProperties, CellProperties, RightCellProperties, FarRightCellProperties, NewCellProperties[2];
 double drho = 0.0, dTE_KEe = 0.0, dTE_KEh = 0.0, x[6], y[6];
 int iProlonged, iRestricted, j;
-
-if(Params.non_equilibrium_radiation)
-{
-	double **ppIonFrac[6];
-}
-
-if(Params.linear_restriction==false)
-{
-	double error;
-}
+//Variables for non-equilibrium radiation
+double **ppIonFrac[6];
+//Variables for linear restriction
+double error;
 
 double fWeight, temp1, temp2, temp3, temp4;
 
@@ -1432,11 +1425,8 @@ void CAdaptiveMesh::Integrate( void )
 PCELL pNextActiveCell, pPreviousCell = NULL, pNewCell;
 CELLPROPERTIES CellProperties, NewCellProperties;
 double delta_t;
-
-if(Params.use_kinetic_model)
-{
-	int iCell = 0;
-}
+//Variables for kinetic model
+int iCell = 0;
 
 // The integration is 2nd order in time and uses the derivatives calculated at half the time-step
 delta_t = 0.5 * mesh_delta_t;
@@ -1609,39 +1599,27 @@ void CAdaptiveMesh::WriteToFile( void )
 {
 FILE *pAMRFile;
 char szAMRFilename[256];
-
-if(Params.write_file_physical)
-{
-	FILE *pPhysicalFile;
-	char szPhysicalFilename[256];
-	sprintf( szPhysicalFilename, "%sprofile%i.phy", Params.output_dir, iFileNumber );
-	pPhysicalFile = fopen( szPhysicalFilename, "w" );
-}
-
-if(Params.non_equilibrium_radiation && Params.write_file_ion_populations)
-{
-	FILE *pNEqIonFile;
-	char szNEqIonFilename[256];
-	sprintf( szNEqIonFilename, "%sprofile%i.ine", Params.output_dir, iFileNumber );
-	pNEqIonFile = fopen( szNEqIonFilename, "w" );
-}
-
-if(Params.write_file_scales)
-{
-	FILE *pScaleFile;
-	char szScaleFilename[256];
-	sprintf( szScaleFilename, "%sprofile%i.scl", Params.output_dir, iFileNumber );
-	pScaleFile = fopen( szScaleFilename, "w" );
-}
-
-if(Params.write_file_terms)
-{
-	FILE *pTermsFile;
-	char szTermsFilename[256];
-	int iTerm;
-	sprintf( szTermsFilename, "%sprofile%i.trm", Params.output_dir, iFileNumber );
-	pTermsFile = fopen( szTermsFilename, "w" );
-}
+//Variables for write file physical
+FILE *pPhysicalFile;
+char szPhysicalFilename[256];
+sprintf( szPhysicalFilename, "%sprofile%i.phy", Params.output_dir, iFileNumber );
+pPhysicalFile = fopen( szPhysicalFilename, "w" );
+//Variables for non-equilibrium radiation and write file ion populations
+FILE *pNEqIonFile;
+char szNEqIonFilename[256];
+sprintf( szNEqIonFilename, "%sprofile%i.ine", Params.output_dir, iFileNumber );
+pNEqIonFile = fopen( szNEqIonFilename, "w" );
+//Variables for write file scales
+FILE *pScaleFile;
+char szScaleFilename[256];
+sprintf( szScaleFilename, "%sprofile%i.scl", Params.output_dir, iFileNumber );
+pScaleFile = fopen( szScaleFilename, "w" );
+//Variables for write file terms
+FILE *pTermsFile;
+char szTermsFilename[256];
+int iTerm;
+sprintf( szTermsFilename, "%sprofile%i.trm", Params.output_dir, iFileNumber );
+pTermsFile = fopen( szTermsFilename, "w" );
 
 PCELL pNextActiveCell;
 CELLPROPERTIES CellProperties;

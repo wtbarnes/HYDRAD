@@ -226,11 +226,7 @@ Kappa[HYDROGEN] = SPITZER_ION_CONDUCTIVITY;
 // General variables
 double term1, term2;
 int j;
-
-if(Params.optically_thick_radiation)
-{
-	double fHI;
-}
+double fHI;
 
 pNextActiveCell = pStartOfCurrentRow;
 
@@ -394,30 +390,21 @@ void CEquations::EvaluateTerms( double current_time, double *delta_t, int iFirst
 {
 PCELL pNextActiveCell, pFarLeftCell, pLeftCell, pRightCell;
 CELLPROPERTIES CellProperties, FarLeftCellProperties, LeftCellProperties, RightCellProperties;
-
-if(Params.non_equilibrium_radiation)
-{
-	PCELL pFarRightCell;
-	CELLPROPERTIES FarRightCellProperties;
-
-	// Variables used for time-dependent ionisation balance calculation
-	double **ppni0, **ppni1, **ppni2, **ppni3, **ppni4, ps[5], **ppdnibydt;
-}
-
-if(Params.optically_thick_radiation)
-{
-	double fHI_c, frho_c, cell_width_cos_theta;
-}
+//Variables used for non-equilibrium radiation
+PCELL pFarRightCell;
+CELLPROPERTIES FarRightCellProperties;
+// Variables used for time-dependent ionisation balance calculation
+double **ppni0, **ppni1, **ppni2, **ppni3, **ppni4, ps[5], **ppdnibydt;
+//Variables used for optically thick radiation
+double fHI_c, frho_c, cell_width_cos_theta;
 
 // Variables used by advective flux transport algorithm
 double Q1, Q2, Q3, QT;
 
 // Variables used by thermal and viscous flux transport algorithms
 double T[3][SPECIES], Kappa[SPECIES], max_flux_coeff[SPECIES], Fc_max, v[2], n, P;
-if(Params.numerical_viscosity)
-{
-	double rho_v[2];	
-}
+//Variables used for numerical viscosity
+double rho_v[2];
 
 Kappa[ELECTRON] = SPITZER_ELECTRON_CONDUCTIVITY;
 Kappa[HYDROGEN] = SPITZER_ION_CONDUCTIVITY;
@@ -430,7 +417,7 @@ double x[5], y[5], UpperValue, LowerValue, error;
 
 // General variables
 double term1, term2;
-int j;
+int j, start_index;
 
 if(Params.use_kinetic_model)
 {
@@ -1093,7 +1080,7 @@ if( CellProperties.T[ELECTRON] < Tcheck)
 	    CellProperties.TE_KE_term[5][ELECTRON] -= pHI->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10((4e-14)*CellProperties.HI_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
 	    CellProperties.TE_KE_term[5][ELECTRON] -= pMgII->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10(CellProperties.rho_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
 	    CellProperties.TE_KE_term[5][ELECTRON] -= pCaII->GetVolumetricLossRate( log10(CellProperties.T[ELECTRON]), log10(CellProperties.rho_c), CellProperties.n[ELECTRON] * CellProperties.rho[1]);
-	    CellProperties.radiation_delta_t = ( Params.safety_radiation * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[5][ELECTRON] )
+	    CellProperties.radiation_delta_t = ( Params.safety_radiation * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[5][ELECTRON] );
     }
 	else
 	{
