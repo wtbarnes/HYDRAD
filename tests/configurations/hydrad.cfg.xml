@@ -20,7 +20,7 @@
 	<density_dependent_rates>False</density_dependent_rates>
 	<optically_thick_radiation>False</optically_thick_radiation>
 	<use_kinetic_model>False</use_kinetic_model>
-	<minimum_collisional_coupling_timescale>0.01</minimum_collisional_coupling_timescale>
+	<minimum_collisional_coupling_time_scale>0.01</minimum_collisional_coupling_time_scale>
 	<force_single_fluid>False</force_single_fluid>
 	<!-- solver options -->
 	<safety_radiation>1.0</safety_radiation>

@@ -40,7 +40,7 @@ struct Parameters {
 	bool write_file_physical, write_file_ion_populations, write_file_scales, write_file_terms;
 	//Physics options
 	int heated_species;
-	double minimum_collisional_coupling_timescale;
+	double minimum_collisional_coupling_time_scale;
 	bool non_equilibrium_radiation, use_power_law_radiative_losses, decouple_ionisation_state_solver, density_dependent_rates, optically_thick_radiation, use_kinetic_model, force_single_fluid;
 	//Solver options
 	double safety_radiation, safety_conduction, safety_advection, safety_viscosity, time_step_increase_limit, relative_viscous_time_scale, minimum_radiation_temperature, zero_over_temperature_interval, minimum_temperature;

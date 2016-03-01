@@ -1,7 +1,7 @@
 // ****
 // *
-// * Function bodies for the class definition of the 
-// * time-dependent hydrodynamic equations, inherited by the 
+// * Function bodies for the class definition of the
+// * time-dependent hydrodynamic equations, inherited by the
 // * adaptive mesh class
 // *
 // * (c) Dr. Stephen J. Bradshaw
@@ -105,7 +105,7 @@ Params.write_file_scales = string2bool(check_element(recursive_read(root,"write_
 Params.write_file_terms = string2bool(check_element(recursive_read(root,"write_file_terms"),"write_file_terms")->GetText());
 //Physics options
 Params.heated_species = atoi(check_element(recursive_read(root,"heated_species"),"heated_species")->GetText());
-Params.minimum_collisional_coupling_timescale = atof(check_element(recursive_read(root,"minimum_collisional_coupling_timescale"),"minimum_collisional_coupling_timescale")->GetText());
+Params.minimum_collisional_coupling_time_scale = atof(check_element(recursive_read(root,"minimum_collisional_coupling_time_scale"),"minimum_collisional_coupling_time_scale")->GetText());
 Params.non_equilibrium_radiation = string2bool(check_element(recursive_read(root,"non_equilibrium_radiation"),"non_equilibrium_radiation")->GetText());
 Params.use_power_law_radiative_losses = string2bool(check_element(recursive_read(root,"use_power_law_radiative_losses"),"use_power_law_radiative_losses")->GetText());
 Params.decouple_ionisation_state_solver = string2bool(check_element(recursive_read(root,"decouple_ionisation_state_solver"),"decouple_ionisation_state_solver")->GetText());
@@ -315,7 +315,7 @@ while( pNextActiveCell )
 
 	if(Params.force_single_fluid)
     {
-    	CellProperties.nu_ie = 1.0 / Params.minimum_collisional_coupling_timescale;
+    	CellProperties.nu_ie = 1.0 / Params.minimum_collisional_coupling_time_scale;
     }
 	else
     {
@@ -342,7 +342,7 @@ while( pNextActiveCell )
     // 0.5 * BOLTZMANN_CONSTANT = 6.9e-17
     term1 = Params.safety_conduction * (6.9e-17) * CellProperties.cell_width * CellProperties.cell_width;
 	int start_index;
-	
+
 	if(Params.use_kinetic_model)
     {
 	    CellProperties.conduction_delta_t[ELECTRON] = Params.Duration;
@@ -352,7 +352,7 @@ while( pNextActiveCell )
     {
     	start_index = 0;
     }
-	
+
 	for( j=start_index; j<SPECIES; j++ )
 	{
 		if(Params.optically_thick_radiation && j == HYDROGEN && CellProperties.T[ELECTRON] < OPTICALLY_THICK_TEMPERATURE)
@@ -409,7 +409,7 @@ double rho_v[2];
 Kappa[ELECTRON] = SPITZER_ELECTRON_CONDUCTIVITY;
 Kappa[HYDROGEN] = SPITZER_ION_CONDUCTIVITY;
 
-max_flux_coeff[ELECTRON] = 1.5 / SQRT_ELECTRON_MASS; 
+max_flux_coeff[ELECTRON] = 1.5 / SQRT_ELECTRON_MASS;
 max_flux_coeff[HYDROGEN] = 1.5 / SQRT_AVERAGE_PARTICLE_MASS;
 
 // Variables used for interpolation
@@ -460,7 +460,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
     if( CellProperties.v[0] > 0.0 )
     {
 // CALCULATE THE DENSITY
-	 
+
         x[1] = FarLeftCellProperties.s[1];
 	x[2] = LeftCellProperties.s[1];
 	y[1] = FarLeftCellProperties.rho[1];
@@ -491,9 +491,9 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 	    else
 	        CellProperties.rho[0] = QT;
 	}
-	        
+
 	LeftCellProperties.rho[2] = CellProperties.rho[0];
-		
+
 // CALCULATE THE MOMENTUM
 
     x[1] = FarLeftCellProperties.s[1];
@@ -526,11 +526,11 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 	    else
 	        CellProperties.rho_v[0] = QT;
 	}
-	        
+
 	LeftCellProperties.rho_v[2] = CellProperties.rho_v[0];
 
 // CALCULATE THE ENERGY
-		
+
 	for( j=0; j<SPECIES; j++ )
 	{
             x[1] = FarLeftCellProperties.s[1];
@@ -563,14 +563,14 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 		else
 		    CellProperties.TE_KE_P[0][j] = QT;
             }
-	        
+
             LeftCellProperties.TE_KE_P[2][j] = CellProperties.TE_KE_P[0][j];
 	}
     }
     else
     {
 // CALCULATE THE DENSITY
-	        
+
     x[1] = CellProperties.s[1];
 	x[2] = RightCellProperties.s[1];
 	y[1] = CellProperties.rho[1];
@@ -601,11 +601,11 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 	    else
 	        CellProperties.rho[0] = QT;
 	}
-	        
+
 	LeftCellProperties.rho[2] = CellProperties.rho[0];
-		
+
 // CALCULATE THE MOMENTUM
-		
+
 	x[1] = CellProperties.s[1];
 	x[2] = RightCellProperties.s[1];
 	y[1] = CellProperties.rho_v[1];
@@ -636,11 +636,11 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 	    else
 	        CellProperties.rho_v[0] = QT;
 	}
-	        
+
 	LeftCellProperties.rho_v[2] = CellProperties.rho_v[0];
 
 // CALCULATE THE ENERGY
-		
+
     for( j=0; j<SPECIES; j++ )
 	{
             x[1] = CellProperties.s[1];
@@ -673,7 +673,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 		else
 	        CellProperties.TE_KE_P[0][j] = QT;
             }
-	        
+
             LeftCellProperties.TE_KE_P[2][j] = CellProperties.TE_KE_P[0][j];
 	}
     }
@@ -698,10 +698,10 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
 		y[2] = LeftCellProperties.Fc[1][j];
 		y[3] = CellProperties.Fc[1][j];
 		y[4] = RightCellProperties.Fc[1][j];
-			
+
 		FitPolynomial4( x, y, CellProperties.s[0], &(CellProperties.Fc[0][j]), &error );
 		LeftCellProperties.Fc[2][j] = CellProperties.Fc[0][j];
-		
+
 		start_index = 1;
 	}
 	else // USE_KINETIC_MODEL
@@ -737,7 +737,7 @@ while( pNextActiveCell->pGetPointer( RIGHT ) )
             CellProperties.Fc[0][j] =  term1 / sqrt( term2 );
 
             LeftCellProperties.Fc[2][j] = CellProperties.Fc[0][j];
-		
+
             if( pLeftCell->pGetPointer( LEFT )->pGetPointer( LEFT ) )
                 LeftCellProperties.Fc[1][j] = 0.5 * ( LeftCellProperties.Fc[0][j] + LeftCellProperties.Fc[2][j] );
 	}
@@ -1045,8 +1045,8 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
     // Set the collisional timescale to 1% of the timescale for order of magnitude changes in the electron energy due to collisional energy exchange
     CellProperties.collision_delta_t = ( 0.01 * CellProperties.TE_KE[1][ELECTRON] ) / fabs( CellProperties.TE_KE_term[3][ELECTRON] );
     // If the collisional timescale is less than the minimum specified collisional timescale then scale the rate of energy exchange so that tiny timesteps can be avoided
-    if( CellProperties.collision_delta_t < Params.minimum_collisional_coupling_timescale )
-        CellProperties.TE_KE_term[3][ELECTRON] *= CellProperties.collision_delta_t / Params.minimum_collisional_coupling_timescale;
+    if( CellProperties.collision_delta_t < Params.minimum_collisional_coupling_time_scale )
+        CellProperties.TE_KE_term[3][ELECTRON] *= CellProperties.collision_delta_t / Params.minimum_collisional_coupling_time_scale;
 
     CellProperties.TE_KE_term[3][HYDROGEN] = - CellProperties.TE_KE_term[3][ELECTRON];
 
@@ -1055,7 +1055,7 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
 // ******************************************************************************
 
     CellProperties.TE_KE_term[4][Params.heated_species] = pHeat->CalculateHeating( CellProperties.s[1], current_time );
-   
+
 // ******************************************************************************
 // *    RADIATION                                                               *
 // ******************************************************************************
@@ -1085,8 +1085,8 @@ if( CellProperties.T[ELECTRON] < Tcheck)
 	else
 	{
         // Provide some additional heating to the chromosphere if the temperature drops below the specified isothermal temperature
-        CellProperties.TE_KE_term[5][ELECTRON] = ( ( ( Params.minimum_radiation_temperature / CellProperties.T[ELECTRON] ) - 1.0 ) * CellProperties.TE_KE[1][ELECTRON] ) / MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
-		CellProperties.radiation_delta_t = MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE;
+        CellProperties.TE_KE_term[5][ELECTRON] = ( ( ( Params.minimum_radiation_temperature / CellProperties.T[ELECTRON] ) - 1.0 ) * CellProperties.TE_KE[1][ELECTRON] ) / Params.minimum_collisional_coupling_time_scale;
+		    CellProperties.radiation_delta_t = Params.minimum_collisional_coupling_time_scale;
     }
 }
 else
@@ -1097,7 +1097,7 @@ else
     {
 	    term1 = ( CellProperties.T[ELECTRON] - Params.minimum_radiation_temperature ) / Params.zero_over_temperature_interval;
     }
-	
+
 if(Params.decouple_ionisation_state_solver)
 {
 		if(Params.use_power_law_radiative_losses)
@@ -1219,7 +1219,7 @@ void CEquations::GetSmallestTimeScale( double *delta_t, int iFirstStep )
 {
 if( !iFirstStep )
     return;
-	
+
 PCELL pNextActiveCell;
 CELLPROPERTIES CellProperties;
 int j;
@@ -1249,7 +1249,7 @@ while( pNextActiveCell->pGetPointer( RIGHT )->pGetPointer( RIGHT ) )
 	*delta_t = CellProperties.viscosity_delta_t;
 
     // Collisional timescale
-    if( CellProperties.collision_delta_t >= MINIMUM_COLLISIONAL_COUPLING_TIME_SCALE &&
+    if( CellProperties.collision_delta_t >= Params.minimum_collisional_coupling_time_scale &&
         CellProperties.collision_delta_t < *delta_t )
         *delta_t = CellProperties.collision_delta_t;
 
@@ -1374,7 +1374,7 @@ while( pNextActiveCell )
 
     ppCellList[iIndex] = pActiveCell;
     iIndex++;
-	
+
     pNextActiveCell=pActiveCell->pGetPointer( RIGHT );
 }
 }
@@ -1625,7 +1625,7 @@ for( iIndex=2; iIndex<iNumCells-2; iIndex++ )
 	}
 
 	term1 = -x_e * ( ( ELECTRON_CHARGE * E ) / ( BOLTZMANN_CONSTANT * CellProperties.T[ELECTRON] ) );
-	term2 = 2.0 * x_t * ( 1.0 / CellProperties.T[ELECTRON] ) * dTbyds; 
+	term2 = 2.0 * x_t * ( 1.0 / CellProperties.T[ELECTRON] ) * dTbyds;
 	fp = lambda_ei * ( term1 + term2 );
 
 	pNonMaxDFN[i] *= ( 1.0 + fp );
@@ -1669,7 +1669,7 @@ for( iIndex=2; iIndex<iNumCells-2; iIndex++ )
 	}
 
 	term1 = -x_e * ( ( ELECTRON_CHARGE * E ) / ( BOLTZMANN_CONSTANT * CellProperties.T[ELECTRON] ) );
-	term2 = 2.0 * x_t * ( 1.0 / CellProperties.T[ELECTRON] ) * dTbyds; 
+	term2 = 2.0 * x_t * ( 1.0 / CellProperties.T[ELECTRON] ) * dTbyds;
 	fp = - lambda_ei * ( term1 + term2 );
 
 	pNonMaxDFN[i] *= ( 1.0 + fp );
@@ -1680,7 +1680,7 @@ for( iIndex=2; iIndex<iNumCells-2; iIndex++ )
     // Calculate the thermal conduction time-scale
     K_SH = SPITZER_ELECTRON_CONDUCTIVITY * pow( CellProperties.T[ELECTRON], 2.5 );
     Kappa = fabs( CellProperties.Fc[1][ELECTRON] / dTbyds );
-	
+
     if( Kappa > K_SH )
         Kappa = K_SH;
 
