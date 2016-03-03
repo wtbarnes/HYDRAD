@@ -28,6 +28,7 @@
 #define MOMENTUM_TERMS          5		// The number of terms in the momentum conservation equation
 #define ENERGY_TERMS            9		// The number of terms in the energy conservation equations
 
+#define MAX_MAX_REFINEMENT_LEVEL	12	// Set cap on max_refinement_level parameter; sizes the iUniqueID array
 
 // **** ADAPTIVE MESH CELL PROPERTIES ****
 
@@ -36,7 +37,7 @@ struct AdaptiveMeshCellProperties {
 
     // The prolongation condition and refinement level of the current cell, and
     // the ID number of the only cell it can be merged with at the prolongation step
-    int iRefinementLevel, iUniqueID[MAX_REFINEMENT_LEVEL+1];
+    int iRefinementLevel,iUniqueID[MAX_MAX_REFINEMENT_LEVEL+1];
 
     // Information about the location of the cell on the grid
     double s[3], cell_width;
@@ -58,7 +59,7 @@ struct AdaptiveMeshCellProperties {
 
     // Fractional population of the ions in the current cell
     PIONFRAC pIonFrac;
-	
+
     // The smallest ionisation / recombination time-scale in the current cell
     double atomic_delta_t;
 
@@ -69,7 +70,7 @@ struct AdaptiveMeshCellProperties {
     PKINETIC pKinetic;
 
     // Terms of the equations
-	
+
     // Mass conservation equation
     double rho_term[MASS_TERMS], drhobydt;
 
@@ -92,17 +93,17 @@ typedef AdaptiveMeshCellProperties* PCELLPROPERTIES;
 
 // Define the adaptive mesh cell class
 class CAdaptiveMeshCell : private AdaptiveMeshCellProperties {
-	
+
     private:
-	
+
     // Pointers to the adjacent cells
     CAdaptiveMeshCell *pNearestCell[4];
 
     public:
-	
+
     // Constructor
     CAdaptiveMeshCell( PCELLPROPERTIES pInitCellProperties );
-	
+
     // Destructor
     ~CAdaptiveMeshCell( void );
 
