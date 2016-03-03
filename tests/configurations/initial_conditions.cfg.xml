@@ -15,7 +15,7 @@
 	<fine_tune_intervals>10000.0</fine_tune_intervals>
 	<!-- (mostly) boolean options originally set in Initial_Conditions/source/config.h -->
 	<isothermal>true</isothermal>
-	<use_power_law_radiative_losses>false</use_power_law_radiative_losses>
+	<use_power_law_radiative_losses>True</use_power_law_radiative_losses>
 	<density_dependent_rates>false</density_dependent_rates>
 	<optically_thick_radiation>false</optically_thick_radiation>
 	<use_tabulated_gravity>false</use_tabulated_gravity>
