@@ -17,11 +17,11 @@
 #include <math.h>
 
 #include "heat.h"
-#include "../../Resources/source/file.h"
-#include "../../Resources/source/fitpoly.h"
-#include "../../Resources/source/xmlreader.h"
+#include "../../rsp_toolkit/source/file.h"
+#include "../../rsp_toolkit/source/fitpoly.h"
+#include "../../rsp_toolkit/source/xmlreader.h"
 
-CHeat::CHeat( TiXmlElement *heating_node, double fL )
+CHeat::CHeat( tinyxml2::XMLElement *heating_node, double fL )
 {
 Initialise( heating_node, fL );
 }
@@ -31,7 +31,7 @@ CHeat::~CHeat( void )
 FreeAll();
 }
 
-void CHeat::Initialise( TiXmlElement *heating_node, double fL )
+void CHeat::Initialise( tinyxml2::XMLElement *heating_node, double fL )
 {
 // Get the length of the loop
 fLoopLength = fL;
@@ -66,7 +66,7 @@ free( tsDepisodic );
 free( teDepisodic );
 }
 
-void CHeat::GetHeatingDataXml(TiXmlElement *heating_node)
+void CHeat::GetHeatingDataXml(tinyxml2::XMLElement *heating_node)
 {	
 	//Load static heating parameteters
 	fDuration = atof(check_element(recursive_read(heating_node,"duration"),"duration")->GetText());
@@ -95,8 +95,8 @@ void CHeat::GetHeatingDataXml(TiXmlElement *heating_node)
 	
 	//Loop over event list
 	int i = 0;
-	TiXmlElement *eventList = check_element(recursive_read(heating_node,"events"),"events");
-	for(TiXmlElement *child = eventList->FirstChildElement(); child != NULL; child=child->NextSiblingElement())
+	tinyxml2::XMLElement *eventList = check_element(recursive_read(heating_node,"events"),"events");
+	for(tinyxml2::XMLElement *child = eventList->FirstChildElement(); child != NULL; child=child->NextSiblingElement())
 	{
 		s0episodic[i] = atof(child->Attribute("loc"));
 		sHepisodic[i] = atof(child->Attribute("spread"));
@@ -109,7 +109,7 @@ void CHeat::GetHeatingDataXml(TiXmlElement *heating_node)
 	}
 }
 
-void CHeat::GetVALHeatingData( TiXmlElement *heating_node )
+void CHeat::GetVALHeatingData( tinyxml2::XMLElement *heating_node )
 {
 char ValHeatingFile[512];
 FILE *pFile;

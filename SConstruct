@@ -10,7 +10,7 @@ import os
 AddOption('--exec',dest='exec',type='string',nargs=1,action='store',default='initial_conditions',help='Target to be compiled; use either "initial_conditions" or "hydrad"')
 
 #Define subdirectories needed for common build
-subdirs = ['Radiation_Model/source','Resources/source']
+subdirs = ['Radiation_Model','rsp_toolkit']
 
 #Add subdirectories depending on which executable will be compiled
 if GetOption('exec') == 'initial_conditions':
@@ -27,7 +27,7 @@ env = Environment(CXX='g++',CXXFLAGS=['-march=native','-mfpmath=sse','-ffast-mat
 #Check OS and change include path
 if 'darwin' in sys.platform:
     env.Append(CPPPATH=['/opt/local/include','/usr/include/malloc'])
-    env.Append(LIBS=['tinyxml','boost_program_options-mt'])
+    env.Append(LIBS=['boost_program_options-mt'])
     env.Append(LIBPATH=['/opt/local/lib'])
 elif 'linux' in sys.platform:
     env.Append(CPPPATH=['/usr/include'])

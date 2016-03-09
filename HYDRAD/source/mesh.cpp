@@ -15,9 +15,9 @@
 #include <math.h>
 
 #include "mesh.h"
-#include "../../Resources/source/constants.h"
-#include "../../Resources/source/file.h"
-#include "../../Resources/source/fitpoly.h"
+#include "../../rsp_toolkit/source/constants.h"
+#include "../../rsp_toolkit/source/file.h"
+#include "../../rsp_toolkit/source/fitpoly.h"
 
 
 // **** ADAPTIVE MESH CLASS ****

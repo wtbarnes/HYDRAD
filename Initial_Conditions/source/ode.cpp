@@ -13,8 +13,8 @@
 
 #include <math.h>
 
-#include  "../../Resources/source/fitpoly.h"
-#include "../../Resources/source/constants.h"
+#include  "../../rsp_toolkit/source/fitpoly.h"
+#include "../../rsp_toolkit/source/constants.h"
 
 
 double CalcdPbyds( double s, double n, int igdp, double **ppGravity )

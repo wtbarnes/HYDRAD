@@ -22,9 +22,9 @@
 #include "misc.h"
 #include "../../Radiation_Model/source/radiation.h"
 #include "../../Radiation_Model/source/OpticallyThick/OpticallyThickIon.h"
-#include  "../../Resources/source/fitpoly.h"
-#include "../../Resources/source/file.h"
-#include "../../Resources/source/constants.h"
+#include  "../../rsp_toolkit/source/fitpoly.h"
+#include "../../rsp_toolkit/source/file.h"
+#include "../../rsp_toolkit/source/constants.h"
 
 
 int main(int argc, char **argv)
@@ -75,7 +75,7 @@ printf( "\n\nCalculating initial hydrostatic conditions...\n\n" );
 GetConfigurationParametersXML( &Params, configFilename );
 
 // Initialise the radiative losses
-pRadiation = new CRadiation(rad_configFilename);
+pRadiation = new CRadiation(rad_configFilename,true);
 	
 // Initialise the gravitational geometry
 if(Params.use_tabulated_gravity)

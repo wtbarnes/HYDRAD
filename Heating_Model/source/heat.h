@@ -10,7 +10,7 @@
 // *
 // ****
 
-#include "tinyxml.h"
+#include "../../rsp_toolkit/source/xmlreader.h"
 
 class CHeat {
 
@@ -44,16 +44,16 @@ class CHeat {
     int iVALHeatingDP;
     double **ppVALHeating;
 
-    void Initialise( TiXmlElement *heating_node, double fL );
+    void Initialise( tinyxml2::XMLElement *heating_node, double fL );
     void FreeAll( void );
 
     void GetHeatingData ( char *szFilename );
-    void GetHeatingDataXml ( TiXmlElement *heating_node );
-    void GetVALHeatingData( TiXmlElement *heating_node );
+    void GetHeatingDataXml ( tinyxml2::XMLElement *heating_node );
+    void GetVALHeatingData( tinyxml2::XMLElement *heating_node );
 
     public:
 
-    CHeat( TiXmlElement *heating_node, double fL );
+    CHeat( tinyxml2::XMLElement *heating_node, double fL );
     ~CHeat( void );
 
     double CalculateQuiescentHeating( double s );

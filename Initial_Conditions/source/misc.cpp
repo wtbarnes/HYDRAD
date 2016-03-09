@@ -14,26 +14,26 @@
 #include <math.h>
 
 #include "params.h"
-#include "../../Resources/source/file.h"
-#include "../../Resources/source/fitpoly.h"
-#include "../../Resources/source/constants.h"
-#include "../../Resources/source/xmlreader.h"
+#include "../../rsp_toolkit/source/file.h"
+#include "../../rsp_toolkit/source/fitpoly.h"
+#include "../../rsp_toolkit/source/constants.h"
+#include "../../rsp_toolkit/source/xmlreader.h"
 
 void GetConfigurationParametersXML( PARAMETERS *pParams, char *configFilename)
 {
 	//Parse XML configuration file
-	TiXmlDocument doc(configFilename);
+	tinyxml2::XMLDocument doc;
 	
 	//Check if loaded
-	bool loadOK = doc.LoadFile();
-	if(!loadOK)
+	tinyxml2::XMLError loadOK = doc.LoadFile(configFilename);
+	if(loadOK != 0)
 	{
 		printf("Failed to load XML configuration file %s.\n",configFilename);
 		//TODO: Exit or break out from here
 	}
 	
 	//Get Document root
-	TiXmlElement *root = doc.FirstChildElement();
+	tinyxml2::XMLElement *root = doc.FirstChildElement();
 	
 	//Retrieve all configuration elements
 	//string

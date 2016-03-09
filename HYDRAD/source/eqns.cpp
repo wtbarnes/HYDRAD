@@ -17,10 +17,10 @@
 #include <math.h>
 
 #include "eqns.h"
-#include "../../Resources/source/constants.h"
-#include "../../Resources/source/file.h"
-#include "../../Resources/source/fitpoly.h"
-#include "../../Resources/source/xmlreader.h"
+#include "../../rsp_toolkit/source/constants.h"
+#include "../../rsp_toolkit/source/file.h"
+#include "../../rsp_toolkit/source/fitpoly.h"
+#include "../../rsp_toolkit/source/xmlreader.h"
 
 
 double fLogLambda_ei( double Te, double Ti, double n )
@@ -77,18 +77,18 @@ FILE *pFile;
 double fTemp;
 int i, iTemp;
 
-TiXmlDocument doc(configFilename);
+tinyxml2::XMLDocument doc;
 
 //Check if loaded
-bool loadOK = doc.LoadFile();
-if(!loadOK)
+tinyxml2::XMLError loadOK = doc.LoadFile(configFilename);
+if(loadOK != 0)
 {
 	printf("Failed to load XML configuration file %s.\n",configFilename);
 	//TODO: Exit or break out from here
 }
 
 //Get Document root
-TiXmlElement *root = doc.FirstChildElement();
+tinyxml2::XMLElement *root = doc.FirstChildElement();
 
 //Load in parameters
 //Filenames
@@ -162,12 +162,12 @@ if(Params.use_kinetic_model)
 }
 
 // Create the heating object and set the lower radiation temperature boundary
-TiXmlElement *heating_config = check_element(recursive_read(root,"heating"),"heating");
+tinyxml2::XMLElement *heating_config = check_element(recursive_read(root,"heating"),"heating");
 pHeat = new CHeat( heating_config, Params.L );
 
 // Create the radiation objects
-pRadiation = new CRadiation(rad_config_neqFilename);
-pRadiation2 = new CRadiation(rad_config_eqFilename);
+pRadiation = new CRadiation(rad_config_neqFilename,true);
+pRadiation2 = new CRadiation(rad_config_eqFilename,true);
 lower_radiation_temperature_boundary = Params.minimum_radiation_temperature + Params.zero_over_temperature_interval;
 
 if(Params.optically_thick_radiation)
