@@ -3,7 +3,8 @@
 	<!-- input options -->
 	<ic_profiles>Initial_Conditions/profiles/initial.amr</ic_profiles>
 	<tabulated_gravity_file>Initial_Conditions/profiles/initial.amr.gravity</tabulated_gravity_file>
-	<duration>1000.0</duration>
+	<kinetic_sh_table_filename>tests/configurations/spitzer_harm_table.txt</kinetic_sh_table_filename>
+	<duration>500.0</duration>
 	<!-- output options -->
 	<output_dir>Results/</output_dir>
 	<file_output_period>10</file_output_period>
@@ -15,7 +16,7 @@
 	<!-- physics options -->
 	<heated_species>0</heated_species>
 	<non_equilibrium_radiation>False</non_equilibrium_radiation>
-	<use_power_law_radiative_losses>True</use_power_law_radiative_losses>
+	<use_power_law_radiative_losses>true</use_power_law_radiative_losses>
 	<decouple_ionisation_state_solver>False</decouple_ionisation_state_solver>
 	<density_dependent_rates>False</density_dependent_rates>
 	<optically_thick_radiation>False</optically_thick_radiation>
@@ -30,15 +31,15 @@
 	<time_step_increase_limit>1.05</time_step_increase_limit>
 	<numerical_viscosity>False</numerical_viscosity>
 	<relative_viscous_time_scale>1.0</relative_viscous_time_scale>
-	<minimum_radiation_temperature>2E4</minimum_radiation_temperature>
-	<zero_over_temperature_interval>1E3</zero_over_temperature_interval>
-	<minimum_temperature>1E4</minimum_temperature>
+	<minimum_radiation_temperature>1E4</minimum_radiation_temperature>
+	<zero_over_temperature_interval>5E2</zero_over_temperature_interval>
+	<minimum_temperature>5E3</minimum_temperature>
 	<!-- grid options -->
 	<adapt>True</adapt>
 	<max_refinement_level>12</max_refinement_level>
 	<min_frac_diff>0.1</min_frac_diff>
-	<max_frac_diff>0.5</max_frac_diff>
-	<refine_on_density>False</refine_on_density>
+	<max_frac_diff>0.2</max_frac_diff>
+	<refine_on_density>True</refine_on_density>
 	<refine_on_electron_energy>False</refine_on_electron_energy>
 	<refine_on_hydrogen_energy>False</refine_on_hydrogen_energy>
 	<linear_restriction>True</linear_restriction>
@@ -46,13 +47,13 @@
 	<!-- heating -->
 	<heating>
 		<val_heating_file>/Users/willbarnes/Documents/Rice/Research/apolloDB/OpticallyThick/VAL_atmospheres/VAL.heat</val_heating_file>
-		<duration>500.0</duration>
-		<bg_loc>3.0E+9</bg_loc>
-		<bg_spread>1.0E+300</bg_spread>
-		<bg_magnitude>1.0E-6</bg_magnitude>
+		<duration>50.0</duration>
+		<bg_loc>4.5E+9</bg_loc>
+		<bg_spread>1E308</bg_spread>
+		<bg_magnitude>5.45E-5</bg_magnitude>
 		<num_events>1</num_events>
 		<events>
-			<event loc="3.0E+9" spread="5.0E+8" magnitude="1.0E-3" rise_start="0.0" rise_end="250.0" decay_start="250.0" decay_end="500.0" />
+			<event loc="4.5E+9" spread="1.0E+308" magnitude="0.4" rise_start="0.0" rise_end="25.0" decay_start="25.0" decay_end="50.0" />
 		</events>
 	</heating>
 </root>
