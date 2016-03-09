@@ -98,13 +98,13 @@ void CHeat::GetHeatingDataXml(TiXmlElement *heating_node)
 	TiXmlElement *eventList = check_element(recursive_read(heating_node,"events"),"events");
 	for(TiXmlElement *child = eventList->FirstChildElement(); child != NULL; child=child->NextSiblingElement())
 	{
-		s0episodic[i] = atoi(child->Attribute("loc"));
-		sHepisodic[i] = atoi(child->Attribute("spread"));
-		E0episodic[i] = atoi(child->Attribute("magnitude"));
-		tsRepisodic[i] = atoi(child->Attribute("rise_start"));
-		teRepisodic[i] = atoi(child->Attribute("rise_end"));
-		tsDepisodic[i] = atoi(child->Attribute("decay_start"));
-		teDepisodic[i] = atoi(child->Attribute("decay_end"));
+		s0episodic[i] = atof(child->Attribute("loc"));
+		sHepisodic[i] = atof(child->Attribute("spread"));
+		E0episodic[i] = atof(child->Attribute("magnitude"));
+		tsRepisodic[i] = atof(child->Attribute("rise_start"));
+		teRepisodic[i] = atof(child->Attribute("rise_end"));
+		tsDepisodic[i] = atof(child->Attribute("decay_start"));
+		teDepisodic[i] = atof(child->Attribute("decay_end"));
 		i++;		
 	}
 }
