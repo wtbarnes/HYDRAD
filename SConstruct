@@ -31,6 +31,8 @@ if 'darwin' in sys.platform:
     env.Append(LIBPATH=['/opt/local/lib'])
 elif 'linux' in sys.platform:
     env.Append(CPPPATH=['/usr/include'])
+    env.Append(LIBS=['boost_program_options'])
+    env.Append(LIBPATH=['/usr/lib'])
 else:
     print("Unrecognized platform. Set CPPPATH manually.")
     sys.exit(1)
