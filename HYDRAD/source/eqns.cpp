@@ -76,6 +76,7 @@ void CEquations::Initialise( char *configFilename, char *rad_config_eqFilename, 
 FILE *pFile;
 double fTemp;
 int i, iTemp;
+char kinetic_sh_table_filename[256];
 
 tinyxml2::XMLDocument doc;
 
@@ -157,8 +158,10 @@ fclose( pFile );
 if(Params.use_kinetic_model)
 {
 	ppCellList = NULL;
+	//Read in SH Table filename
+	sprintf(kinetic_sh_table_filename,"%s",check_element(recursive_read(root,"kinetic_sh_table_filename"),"kinetic_sh_table_filename")->GetText());
 	// Get the tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
-	Get_SH_Table();
+	Get_SH_Table(kinetic_sh_table_filename);
 }
 
 // Create the heating object and set the lower radiation temperature boundary
@@ -1322,12 +1325,12 @@ for( j=0; j<SPECIES; j++ )
 #define X_E							1		// Coefficients when an electric field is present in column 1
 #define X_T							2		// Coefficients when a temperature gradient is present in column 2
 
-void CEquations::Get_SH_Table( void )
+void CEquations::Get_SH_Table( char *sh_table_filename )
 {
 FILE *pFile;
 int i;
 
-pFile = fopen( "Kinetic_Model/config/spitzer_harm_table.txt" ,"r" );
+pFile = fopen( sh_table_filename ,"r" );
 for( i=0; i<51; i++ )
 {
     ReadDouble( pFile, &(SH_Table[i][U]) );

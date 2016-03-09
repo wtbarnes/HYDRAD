@@ -38,7 +38,7 @@ class CEquations {
     // Functions for the Spitzer-Harm part of the solution
     // Tabulated values from tables I and II (for Z = 1) in Spitzer & Harm, 1953, Phys. Rev., 89, 977
     double SH_Table[51][3];
-    void Get_SH_Table( void );
+    void Get_SH_Table( char *sh_table_filename );
 
     public:
 
