@@ -8,7 +8,7 @@ import glob
 #Import environment from SConstruct
 Import('env')
 
-sources = glob.glob('*.cpp')
+sources = glob.glob('source/*.cpp')
 
 objs = env.Object(sources)
 

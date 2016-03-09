@@ -14,9 +14,9 @@ subdirs = ['Radiation_Model','rsp_toolkit']
 
 #Add subdirectories depending on which executable will be compiled
 if GetOption('exec') == 'initial_conditions':
-    subdirs = subdirs + ['Initial_Conditions/source']
+    subdirs = subdirs + ['Initial_Conditions']
 elif GetOption('exec') == 'hydrad':
-    subdirs = subdirs + ['Kinetic_Model/source','Heating_Model/source','HYDRAD/source']
+    subdirs = subdirs + ['Kinetic_Model','Heating_Model','HYDRAD']
 else:
     print("Unrecognized target option. Use 'initial_conditions' or 'hydrad'")
     sys.exit(1)
