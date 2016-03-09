@@ -1,1 +1,0 @@
-g++ -m64 -Ofast -flto -march=native -funroll-loops -Wall ../source/main.cpp ../../../source/file.cpp -o ../calculateEM.exe
