@@ -34,4 +34,4 @@
 */profiles
 Results/
 # Executable
-*.run
+bin/*.run

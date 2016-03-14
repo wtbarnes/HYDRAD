@@ -32,11 +32,16 @@ if 'darwin' in sys.platform:
 elif 'linux' in sys.platform:
     env.Append(CPPPATH=['/usr/include'])
     env.Append(LIBS=['boost_program_options'])
-    env.Append(LIBPATH=['/usr/lib'])
+    env.Append(LIBPATH=['/usr/lib/x86_64-linux-gnu'])
 else:
-    print("Unrecognized platform. Set CPPPATH manually.")
-    sys.exit(1)
-    #TODO: add Windows option here; where is malloc.h in Cygwin?
+    print("Unrecognized platform. Using Windows compile options.")
+    env.Append(CPPPATH=['/usr/local/include'])
+    env.Append(LIBS=['boost_program_options'])
+    env.Append(LIBPATH=['/usr/local/lib'])
+    
+#create bin if it does not already exist
+if not os.path.isdir('bin'):
+    os.makedirs('bin')
     
 #Iterate over subdirectories
 allobjs = []
@@ -44,4 +49,4 @@ for sd in subdirs:
     consfile = os.path.join(sd,'SConscript')
     allobjs = allobjs + env.SConscript(consfile,exports=['env'])
     
-env.Program(GetOption('exec')+'.run',allobjs)
+env.Program(os.path.join('bin',GetOption('exec')+'.run'),allobjs)
