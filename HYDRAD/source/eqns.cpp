@@ -1105,19 +1105,19 @@ if(Params.decouple_ionisation_state_solver)
 {
 		if(Params.use_power_law_radiative_losses)
 		{
-			printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; USE_POWER_LAW_RADIATIVE_LOSSES\n" );
+			//printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; USE_POWER_LAW_RADIATIVE_LOSSES\n" );
 			CellProperties.TE_KE_term[5][ELECTRON] -= term1 * pRadiation2->GetPowerLawRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) );
 		}
 		else // USE_POWER_LAW_RADIATIVE_LOSSES
 		{
 			if(Params.non_equilibrium_radiation)
 			{
-				printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; NON_EQUILIBRIUM_RADIATION\n" );
+				//printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; NON_EQUILIBRIUM_RADIATION\n" );
 				CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
 			}
 			else // NON_EQUILIBRIUM_RADIATION
 			{
-				printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; nNON_EQUILIBRIUM_RADIATION\n" );
+				//printf( "nOPTICALLY_THICK_RADIATION; DECOUPLE_IONISATION_STATE_SOLVER; nUSE_POWER_LAW_RADIATIVE_LOSSES; nNON_EQUILIBRIUM_RADIATION\n" );
 				CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
 			}
 		}
@@ -1126,7 +1126,7 @@ else // DECOUPLE_IONISATION_STATE_SOLVER
 {
 		if(Params.non_equilibrium_radiation)
 		{
-				printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; NON_EQUILIBRIUM_RADIATION\n" );
+				//printf( "nOPTICALLY_THICK_RADIATION; nDECOUPLE_IONISATION_STATE_SOLVER; NON_EQUILIBRIUM_RADIATION\n" );
 		        	ppni2 = CellProperties.pIonFrac->ppGetIonFrac();
 			        CellProperties.TE_KE_term[5][ELECTRON] -= term1 * ( pRadiation->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ), ppni2 ) + pRadiation2->GetRadiation( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) + pRadiation2->GetFreeFreeRad( log10( CellProperties.T[ELECTRON] ), log10( CellProperties.n[ELECTRON] ) ) );
 		}
