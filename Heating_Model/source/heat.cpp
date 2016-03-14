@@ -37,7 +37,7 @@ void CHeat::Initialise( tinyxml2::XMLElement *heating_node, double fL )
 fLoopLength = fL;
 
 // GetHeatingData( szFilename );
-GetHeatingDataXml(heating_node);
+GetHeatingData(heating_node);
 GetVALHeatingData(heating_node);
 }
 
@@ -66,13 +66,16 @@ free( tsDepisodic );
 free( teDepisodic );
 }
 
-void CHeat::GetHeatingDataXml(tinyxml2::XMLElement *heating_node)
+void CHeat::GetHeatingData(tinyxml2::XMLElement *heating_node)
 {	
+	tinyxml2::XMLElement *bg_element;
+	
 	//Load static heating parameteters
+	bg_element = check_element(recursive_read(heating_node,"bg"),"bg");
+	s0quiescent = atof(bg_element->Attribute("loc"));
+	sHquiescent = atof(bg_element->Attribute("spread"));
+	E0quiescent = atof(bg_element->Attribute("magnitude"));
 	fDuration = atof(check_element(recursive_read(heating_node,"duration"),"duration")->GetText());
-	s0quiescent = atof(check_element(recursive_read(heating_node,"bg_loc"),"bg_loc")->GetText());
-	sHquiescent = atof(check_element(recursive_read(heating_node,"bg_spread"),"bg_spread")->GetText());
-	E0quiescent = atof(check_element(recursive_read(heating_node,"bg_magnitude"),"bg_magnitude")->GetText());
 	NumActivatedEvents = atoi(check_element(recursive_read(heating_node,"num_events"),"num_events")->GetText());
 	
 	//Return if only bg heating selected

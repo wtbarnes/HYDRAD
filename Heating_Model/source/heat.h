@@ -47,8 +47,7 @@ class CHeat {
     void Initialise( tinyxml2::XMLElement *heating_node, double fL );
     void FreeAll( void );
 
-    void GetHeatingData ( char *szFilename );
-    void GetHeatingDataXml ( tinyxml2::XMLElement *heating_node );
+    void GetHeatingData ( tinyxml2::XMLElement *heating_node );
     void GetVALHeatingData( tinyxml2::XMLElement *heating_node );
 
     public:

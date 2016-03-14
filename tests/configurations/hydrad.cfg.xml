@@ -48,9 +48,7 @@
 	<heating>
 		<val_heating_file>/Users/willbarnes/Documents/Rice/Research/apolloDB/OpticallyThick/VAL_atmospheres/VAL.heat</val_heating_file>
 		<duration>50.0</duration>
-		<bg_loc>4.5E+9</bg_loc>
-		<bg_spread>1E308</bg_spread>
-		<bg_magnitude>5.45E-5</bg_magnitude>
+		<bg loc="4.5E+9" spread="1E308" magnitude="5.45E-5" />
 		<num_events>1</num_events>
 		<events>
 			<event loc="4.5E+9" spread="1.0E+308" magnitude="0.4" rise_start="0.0" rise_end="25.0" decay_start="25.0" decay_end="50.0" />
