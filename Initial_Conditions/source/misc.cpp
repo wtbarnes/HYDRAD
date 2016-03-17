@@ -23,7 +23,7 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *configFilename)
 {
 	//Parse XML configuration file
 	tinyxml2::XMLDocument doc;
-	
+
 	//Check if loaded
 	tinyxml2::XMLError loadOK = doc.LoadFile(configFilename);
 	if(loadOK != 0)
@@ -31,10 +31,10 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *configFilename)
 		printf("Failed to load XML configuration file %s.\n",configFilename);
 		//TODO: Exit or break out from here
 	}
-	
+
 	//Get Document root
 	tinyxml2::XMLElement *root = doc.FirstChildElement();
-	
+
 	//Retrieve all configuration elements
 	//string
 	sprintf(pParams->szOutputFilename,"%s",check_element(recursive_read(root,"ic_root_output"),"ic_root_output")->GetText());
@@ -49,7 +49,7 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *configFilename)
 	pParams->sH = atof(check_element(recursive_read(root,"heating_spread"),"heating_spread")->GetText());
 	pParams->Log_10H0[0] = atof(check_element(recursive_read(root,"heating_range_lower"),"heating_range_lower")->GetText());
     pParams->Log_10H0[1] = atof(check_element(recursive_read(root,"heating_range_upper"),"heating_range_upper")->GetText());
-	pParams->dLog_10H0 = atof(check_element(recursive_read(root,"search_step_size"),"search_step_size")->GetText()); 
+	pParams->dLog_10H0 = atof(check_element(recursive_read(root,"search_step_size"),"search_step_size")->GetText());
 	pParams->Hintervals = atof(check_element(recursive_read(root,"fine_tune_intervals"),"fine_tune_intervals")->GetText());
 	pParams->epsilon = atof(check_element(recursive_read(root,"epsilon"),"epsilon")->GetText());
 	pParams->min_ds = atof(check_element(recursive_read(root,"min_ds"),"min_ds")->GetText());
@@ -65,7 +65,7 @@ void GetConfigurationParametersXML( PARAMETERS *pParams, char *configFilename)
 	pParams->optically_thick_radiation = string2bool(check_element(recursive_read(root,"optically_thick_radiation"),"optically_thick_radiation")->GetText());
 	pParams->use_tabulated_gravity = string2bool(check_element(recursive_read(root,"use_tabulated_gravity"),"use_tabulated_gravity")->GetText());
 	pParams->adapt = string2bool(check_element(recursive_read(root,"adapt"),"adapt")->GetText());
-	
+
 	//Free document tree
 	doc.Clear();
 
@@ -131,7 +131,7 @@ long i, k;
 ds = Params.Lfull / Params.min_cells;
 if(Params.adapt)
 {
-	ds /= pow( 2.0, Params.max_refinement_level);	
+	ds /= pow( 2.0, Params.max_refinement_level);
 }
 iMAX_CELLS = (long)(Params.Lfull/ds);
 
@@ -162,7 +162,7 @@ if(Params.adapt)
 
 	        iID++;
 	    }
-	}	
+	}
 }
 
 sAMR = ds / 2.0;

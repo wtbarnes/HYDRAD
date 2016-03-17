@@ -1,6 +1,6 @@
 // ****
 // *
-// * A hydrostatic code that calculates a set of initial conditions 
+// * A hydrostatic code that calculates a set of initial conditions
 // * for the hydrodynamic code
 // *
 // * (c) Dr. Stephen J. Bradshaw
@@ -38,7 +38,7 @@ int AddChromospheresOpticallyThick( int iTRplusCoronaplusTRSteps, double *s, dou
 PARAMETERS Params;
 PRADIATION pRadiation;
 
-//Read command line options 
+//Read command line options
 namespace po = boost::program_options;
 po::options_description description("A hydrostatic code that calculates a set of initial conditions for the HYDRAD hydrodynamic code\n\n(c) Dr. Stephen J. Bradshaw\n\nUsage");
 description.add_options()
@@ -76,7 +76,7 @@ GetConfigurationParametersXML( &Params, configFilename );
 
 // Initialise the radiative losses
 pRadiation = new CRadiation(rad_configFilename,true);
-	
+
 // Initialise the gravitational geometry
 if(Params.use_tabulated_gravity)
 {
@@ -161,149 +161,148 @@ sR = Params.Lfull - sL;
 // First find the lower- and upper-limits of the heating range
 for( Log_10H0=Params.Log_10H0[0]; Log_10H0<=Params.Log_10H0[1]; Log_10H0+=Params.dLog_10H0 )
 {
-    iStep = 0;
+  iStep = 0;
 
 	if(Params.isothermal)
 	{
-	    H0 = 0.0;
+		H0 = 0.0;
 	}
 	else
 	{
-	    H0 = pow( 10.0, Log_10H0 );		
+	  H0 = pow( 10.0, Log_10H0 );
 	}
 
-    // Set the initial conditions
-    Fc = 0.0;
-    nH[iStep] = Params.n0;
+  // Set the initial conditions
+  Fc = 0.0;
+  nH[iStep] = Params.n0;
 	if(Params.optically_thick_radiation)
 	{
 		// 1.000144 = 1.0 + 1.44e-4
-	 	ne[iStep] = 1.000144 * nH[iStep];
+		ne[iStep] = 1.000144 * nH[iStep];
 	}
 	else
 	{
 	    ne[iStep] = nH[iStep];
-	
+
 	}
-	
-    T[iStep] = Params.T0;
-    P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
-    s[iStep] = 0.0 + sL;
-    ds = Params.min_ds;
+  T[iStep] = Params.T0;
+  P[iStep] = BOLTZMANN_CONSTANT * ( nH[iStep] + ne[iStep] ) * T[iStep];
 
-    for( ;; ) {
-        do {
-// *****************************************************************************
-// *    STEP 1                                                                 *
-// *****************************************************************************
+  s[iStep] = 0.0 + sL;
+  ds = Params.min_ds;
 
-            // Get the pressure gradient
-            dPbyds = CalcdPbyds( s[iStep], nH[iStep], igdp, ppGravity );
+  for( ;; ) {
+    do {
+			// *****************************************************************************
+			// *    STEP 1                                                                 *
+			// *****************************************************************************
 
-            // Calculate the heat input and the radiation
+	    // Get the pressure gradient
+	    dPbyds = CalcdPbyds( s[iStep], nH[iStep], igdp, ppGravity );
+
+	    // Calculate the heat input and the radiation
 			if(Params.isothermal)
 			{
-	            H = 0.0;
-	            R = 0.0;
+	      H = 0.0;
+	      R = 0.0;
 			}
 			else
 			{
-	            H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
+	      H = Eheat( s[iStep], H0, Params.sH0, Params.sH );
 				if(Params.use_power_law_radiative_losses)
 				{
-		            R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
+	        R = - pRadiation->GetPowerLawRad( log10( T[iStep] ), log10( nH[iStep] ) );
 				}
 				else
 				{
-		            R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) + pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ) );
+					R = - ( pRadiation->GetRadiation( log10( T[iStep] ), log10( nH[iStep] ) ) +  pRadiation->GetFreeFreeRad( log10( T[iStep] ), log10( nH[iStep] ) ));
 				}
 			}
 
-            // Get the heat flux gradient
-            dFcbyds = CalcdFcbyds( H, R );
+	    // Get the heat flux gradient
+	    dFcbyds = CalcdFcbyds( H, R );
 
-            // Get the temperature gradient
-            dTbyds = CalcdTbyds( Fc, T[iStep] );
+	    // Get the temperature gradient
+	    dTbyds = CalcdTbyds( Fc, T[iStep] );
 
-            P2 = P[iStep] + ( dPbyds * (ds/2.0) );
-            Fc2 = Fc + ( dFcbyds * (ds/2.0) );
-            T2 = T[iStep] + ( dTbyds * (ds/2.0) );
-            nH2 = P2 / ( 2.0 * BOLTZMANN_CONSTANT * T2 );
+	    P2 = P[iStep] + ( dPbyds * (ds/2.0) );
+	    Fc2 = Fc + ( dFcbyds * (ds/2.0) );
+	    T2 = T[iStep] + ( dTbyds * (ds/2.0) );
+	    nH2 = P2 / ( 2.0 * BOLTZMANN_CONSTANT * T2 );
 
-// *****************************************************************************
-// *    STEP 2                                                                 *
-// *****************************************************************************
+			// *****************************************************************************
+			// *    STEP 2                                                                 *
+			// *****************************************************************************
 
-            // Get the pressure gradient
-            dPbyds = CalcdPbyds( (s[iStep]+(ds/2.0)), nH2, igdp, ppGravity );
+	    // Get the pressure gradient
+	    dPbyds = CalcdPbyds( (s[iStep]+(ds/2.0)), nH2, igdp, ppGravity );
 
-            // Calculate the heat input and the radiation
+	    // Calculate the heat input and the radiation
 			if(Params.isothermal)
 			{
-	            H = 0.0;
-	            R = 0.0;
+	      H = 0.0;
+	      R = 0.0;
 			}
 			else
 			{
-	            H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
+	      H = Eheat( (s[iStep]+(ds/2.0)), H0, Params.sH0, Params.sH );
 				if(Params.use_power_law_radiative_losses)
 				{
-		            R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
+	        R = - pRadiation->GetPowerLawRad( log10( T2 ), log10( nH2 ) );
 				}
 				else
 				{
-		            R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
+	        R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
 				}
 			}
 
-            // Get the heat flux gradient
-            dFcbyds = CalcdFcbyds( H, R );
+	    // Get the heat flux gradient
+	    dFcbyds = CalcdFcbyds( H, R );
 
-            // Get the temperature gradient
-            dTbyds = CalcdTbyds( Fc2, T2 );
+	    // Get the temperature gradient
+	    dTbyds = CalcdTbyds( Fc2, T2 );
 
-// *****************************************************************************
-// *    STEP 3                                                                 *
-// *****************************************************************************
+			// *****************************************************************************
+			// *    STEP 3                                                                 *
+			// *****************************************************************************
 
-            T[iStep+1] = T[iStep] + ( dTbyds * ds );
-            FracDiff = fabs( 1.0 - ( T[iStep+1] / T[iStep] ) );
-            if( FracDiff > Params.epsilon )
-            {
+	    T[iStep+1] = T[iStep] + ( dTbyds * ds );
+	    FracDiff = fabs( 1.0 - ( T[iStep+1] / T[iStep] ) );
+	    if( FracDiff > Params.epsilon )
+	    {
 				ds /= Params.max_variation;
 				if( ds < Params.min_ds )
 				{
 					ds = Params.min_ds;
 				}
-            }
-        } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
+	    }
+    } while ( FracDiff > Params.epsilon && ds > Params.min_ds );
 
-        s[iStep+1] = s[iStep] + ds;
-        if( s[iStep+1] >= sR ) break;
+    s[iStep+1] = s[iStep] + ds;
+    if( s[iStep+1] >= sR ) break;
+    if( T[iStep+1] < Params.T0 ) break;
 
-        if( T[iStep+1] < Params.T0 ) break;
-
-        Fc += dFcbyds * ds;
-        P[iStep+1] = P[iStep] + ( dPbyds * ds );
-        nH[iStep+1] = P[iStep+1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep+1] );
+    Fc += dFcbyds * ds;
+    P[iStep+1] = P[iStep] + ( dPbyds * ds );
+    nH[iStep+1] = P[iStep+1] / ( 2.0 * BOLTZMANN_CONSTANT * T[iStep+1] );
 		if(Params.optically_thick_radiation)
 		{
-	        // 1.000144 = 1.0 + 1.44e-4
-	        ne[iStep+1] = 1.000144 * nH[iStep+1];
+	    // 1.000144 = 1.0 + 1.44e-4
+	    ne[iStep+1] = 1.000144 * nH[iStep+1];
 		}
 		else
 		{
-	        ne[iStep+1] = nH[iStep+1];
+	    ne[iStep+1] = nH[iStep+1];
 		}
 
-        ds *= Params.max_variation;
-        if( ds > max_ds ) ds = max_ds;
+    ds *= Params.max_variation;
+    if( ds > max_ds ) ds = max_ds;
 
-        iStep++;
-    }
+    iStep++;
+  }
 
-    if( s[iStep+1] < sR ) break;
+  if( s[iStep+1] < sR ) break;
 }
 
 return Log_10H0;
@@ -368,7 +367,7 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
 
 	            H = 0.0;
 	            R = 0.0;
-				
+
 			}
 			else
 			{
@@ -419,7 +418,7 @@ for( H0=H0lower; H0<=H0upper; H0+=dH0 )
 		            R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
 				}
 			}
-			
+
             // Get the heat flux gradient
             dFcbyds = CalcdFcbyds( H, R );
 
@@ -579,7 +578,7 @@ while( s[iStep] <= sR ) {
 		        R = - ( pRadiation->GetRadiation( log10( T2 ), log10( nH2 ) ) + pRadiation->GetFreeFreeRad( log10( T2 ), log10( nH2 ) ) );
 			}
         }
-		
+
         // Get the heat flux gradient
         dFcbyds = CalcdFcbyds( H, R );
 
